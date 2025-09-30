@@ -33,6 +33,12 @@ func SetupRoutes(r *gin.Engine, stDomHandler *handlers.StDomHandler, sobaHandler
 			sobas.GET("/:id", sobaHandler.GetSoba)
 		}
 
+		// Inter-service communication endpoint (no auth required for service-to-service calls)
+		interService := v1.Group("/internal")
+		{
+			interService.GET("/users/:userId/room-status", prihvacenaAplikacijaHandler.CheckUserRoomStatus) // Check if user has active room
+		}
+
 		// User routes (authentication required)
 		user := v1.Group("/")
 		user.Use(middleware.AuthMiddleware(jwtSecret))

@@ -312,3 +312,24 @@ func (h *PrihvacenaAplikacijaHandler) CheckoutFromRoom(c *gin.Context) {
 		"message": "Successfully checked out from room",
 	})
 }
+
+// CheckUserRoomStatus checks if a user has an active room assignment (for inter-service communication)
+func (h *PrihvacenaAplikacijaHandler) CheckUserRoomStatus(c *gin.Context) {
+	userIDParam := c.Param("userId")
+	userID, err := primitive.ObjectIDFromHex(userIDParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID format"})
+		return
+	}
+
+	hasRoom, err := h.prihvacenaAplikacijaService.CheckUserHasActiveRoom(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"user_id": userID,
+		"has_active_room": hasRoom,
+	})
+}

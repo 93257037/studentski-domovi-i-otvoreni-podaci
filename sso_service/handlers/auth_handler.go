@@ -84,6 +84,26 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 	})
 }
 
+// DeleteAccount handles user account deletion
+// User cannot delete account if they have an active room assignment
+func (h *AuthHandler) DeleteAccount(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+		return
+	}
+
+	err := h.userService.DeleteUser(userID.(primitive.ObjectID))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Account deleted successfully",
+	})
+}
+
 // Health check endpoint
 func (h *AuthHandler) Health(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{

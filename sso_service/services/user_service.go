@@ -2,7 +2,10 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
 	"sso_service/models"
 	"sso_service/utils"
 	"time"
@@ -14,15 +17,17 @@ import (
 
 // UserService handles user-related operations
 type UserService struct {
-	collection *mongo.Collection
-	jwtSecret  string
+	collection      *mongo.Collection
+	jwtSecret       string
+	stDomServiceURL string
 }
 
 // NewUserService creates a new UserService
-func NewUserService(collection *mongo.Collection, jwtSecret string) *UserService {
+func NewUserService(collection *mongo.Collection, jwtSecret string, stDomServiceURL string) *UserService {
 	return &UserService{
-		collection: collection,
-		jwtSecret:  jwtSecret,
+		collection:      collection,
+		jwtSecret:       jwtSecret,
+		stDomServiceURL: stDomServiceURL,
 	}
 }
 
@@ -119,5 +124,69 @@ func (s *UserService) GetUserByID(userID primitive.ObjectID) (*models.User, erro
 	// Clear password from response
 	user.Password = ""
 	return &user, nil
+}
+
+// DeleteUser deletes a user account
+// First checks with st_dom_service if user has an active room assignment
+func (s *UserService) DeleteUser(userID primitive.ObjectID) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Check if user exists
+	var user models.User
+	err := s.collection.FindOne(ctx, bson.M{"_id": userID}).Decode(&user)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return errors.New("user not found")
+		}
+		return err
+	}
+
+	// Call st_dom_service to check if user has an active room
+	hasActiveRoom, err := s.checkUserHasActiveRoom(userID)
+	if err != nil {
+		return errors.New("failed to verify room status with dormitory service: " + err.Error())
+	}
+
+	if hasActiveRoom {
+		return errors.New("cannot delete account: you must check out from your assigned room first")
+	}
+
+	// Proceed with deletion
+	result, err := s.collection.DeleteOne(ctx, bson.M{"_id": userID})
+	if err != nil {
+		return err
+	}
+
+	if result.DeletedCount == 0 {
+		return errors.New("user not found")
+	}
+
+	return nil
+}
+
+// checkUserHasActiveRoom calls the st_dom_service to check if user has an active room
+func (s *UserService) checkUserHasActiveRoom(userID primitive.ObjectID) (bool, error) {
+	url := fmt.Sprintf("%s/api/v1/internal/users/%s/room-status", s.stDomServiceURL, userID.Hex())
+	
+	resp, err := http.Get(url)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return false, errors.New("failed to check room status")
+	}
+
+	var result struct {
+		HasActiveRoom bool `json:"has_active_room"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return false, err
+	}
+
+	return result.HasActiveRoom, nil
 }
 

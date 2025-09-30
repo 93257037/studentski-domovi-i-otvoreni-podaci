@@ -33,7 +33,7 @@ func main() {
 	usersCollection := db.GetCollection("users")
 
 	// Initialize services
-	userService := services.NewUserService(usersCollection, cfg.JWTSecret)
+	userService := services.NewUserService(usersCollection, cfg.JWTSecret, cfg.StDomServiceURL)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(userService)

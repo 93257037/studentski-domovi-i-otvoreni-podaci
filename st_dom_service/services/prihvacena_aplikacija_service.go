@@ -390,3 +390,21 @@ func (s *PrihvacenaAplikacijaService) CheckoutStudent(userID primitive.ObjectID)
 
 	return nil
 }
+
+// CheckUserHasActiveRoom checks if a user has an active room assignment
+// Returns true if user has a room, false otherwise
+func (s *PrihvacenaAplikacijaService) CheckUserHasActiveRoom(userID primitive.ObjectID) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	var prihvacenaAplikacija models.PrihvacenaAplikacija
+	err := s.collection.FindOne(ctx, bson.M{"user_id": userID}).Decode(&prihvacenaAplikacija)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return false, nil // User doesn't have an active room
+		}
+		return false, err // Some other error occurred
+	}
+
+	return true, nil // User has an active room
+}

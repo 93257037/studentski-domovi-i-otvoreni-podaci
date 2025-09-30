@@ -30,6 +30,7 @@ func SetupRoutes(r *gin.Engine, authHandler *handlers.AuthHandler, jwtSecret str
 		protected.Use(middleware.AuthMiddleware(jwtSecret))
 		{
 			protected.GET("/profile", authHandler.GetProfile)
+			protected.DELETE("/account", authHandler.DeleteAccount)
 		}
 	}
 }
