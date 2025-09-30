@@ -265,3 +265,50 @@ func (h *PrihvacenaAplikacijaHandler) DeletePrihvacenaAplikacija(c *gin.Context)
 		"message": "Accepted application deleted successfully",
 	})
 }
+
+// EvictStudent handles evicting a student from their room (admin only)
+func (h *PrihvacenaAplikacijaHandler) EvictStudent(c *gin.Context) {
+	var req models.EvictStudentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := h.prihvacenaAplikacijaService.EvictStudent(req.UserID, req.Reason)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Student evicted successfully",
+		"user_id": req.UserID,
+		"reason":  req.Reason,
+	})
+}
+
+// CheckoutFromRoom handles a student voluntarily leaving their room
+func (h *PrihvacenaAplikacijaHandler) CheckoutFromRoom(c *gin.Context) {
+	// Extract user ID from JWT token
+	userIDClaim, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
+		return
+	}
+
+	userID, ok := userIDClaim.(primitive.ObjectID)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID format"})
+		return
+	}
+
+	err := h.prihvacenaAplikacijaService.CheckoutStudent(userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Successfully checked out from room",
+	})
+}

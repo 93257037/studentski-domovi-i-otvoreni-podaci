@@ -235,6 +235,12 @@ type ApproveAplikacijaRequest struct {
 	AcademicYear string             `json:"academic_year" binding:"required"` // Format: "2024/2025"
 }
 
+// EvictStudentRequest represents the request body for evicting a student
+type EvictStudentRequest struct {
+	UserID primitive.ObjectID `json:"user_id" binding:"required"`
+	Reason string             `json:"reason" binding:"required"` // Reason for eviction
+}
+
 // NewPrihvacenaAplikacija creates a new accepted application from an Aplikacija
 func NewPrihvacenaAplikacija(aplikacija *Aplikacija, academicYear string) PrihvacenaAplikacija {
 	return PrihvacenaAplikacija{

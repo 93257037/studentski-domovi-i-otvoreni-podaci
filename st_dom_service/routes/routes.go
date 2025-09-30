@@ -51,6 +51,7 @@ func SetupRoutes(r *gin.Engine, stDomHandler *handlers.StDomHandler, sobaHandler
 			prihvaceneAplikacije := user.Group("/prihvacene_aplikacije")
 			{
 				prihvaceneAplikacije.GET("/my", prihvacenaAplikacijaHandler.GetMyPrihvaceneAplikacije) // User gets their own accepted applications
+				prihvaceneAplikacije.POST("/checkout", prihvacenaAplikacijaHandler.CheckoutFromRoom)    // User voluntarily leaves room
 			}
 
 			// User payment routes
@@ -93,6 +94,7 @@ func SetupRoutes(r *gin.Engine, stDomHandler *handlers.StDomHandler, sobaHandler
 			adminPrihvaceneAplikacije := admin.Group("/prihvacene_aplikacije")
 			{
 				adminPrihvaceneAplikacije.POST("/approve", prihvacenaAplikacijaHandler.ApproveAplikacija)                       // Approve application
+				adminPrihvaceneAplikacije.POST("/evict", prihvacenaAplikacijaHandler.EvictStudent)                             // Evict student from room
 				adminPrihvaceneAplikacije.GET("/", prihvacenaAplikacijaHandler.GetAllPrihvaceneAplikacije)                    // Get all accepted applications
 				adminPrihvaceneAplikacije.GET("/:id", prihvacenaAplikacijaHandler.GetPrihvacenaAplikacija)                    // Get accepted application by ID
 				adminPrihvaceneAplikacije.GET("/user/:userId", prihvacenaAplikacijaHandler.GetPrihvaceneAplikacijeForUser)    // Get by user

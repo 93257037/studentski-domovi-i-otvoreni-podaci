@@ -333,3 +333,60 @@ func (s *PrihvacenaAplikacijaService) DeletePrihvacenaAplikacija(id primitive.Ob
 
 	return nil
 }
+
+// EvictStudent evicts a student from their room (admin only)
+// This removes the accepted application, freeing up the room spot
+func (s *PrihvacenaAplikacijaService) EvictStudent(userID primitive.ObjectID, reason string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Find the user's active accepted application
+	var prihvacenaAplikacija models.PrihvacenaAplikacija
+	err := s.collection.FindOne(ctx, bson.M{"user_id": userID}).Decode(&prihvacenaAplikacija)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return errors.New("user does not have an active room assignment")
+		}
+		return err
+	}
+
+	// Delete the accepted application
+	result, err := s.collection.DeleteOne(ctx, bson.M{"_id": prihvacenaAplikacija.ID})
+	if err != nil {
+		return err
+	}
+
+	if result.DeletedCount == 0 {
+		return errors.New("failed to evict student")
+	}
+
+	return nil
+}
+
+// CheckoutStudent allows a student to voluntarily leave their room
+func (s *PrihvacenaAplikacijaService) CheckoutStudent(userID primitive.ObjectID) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Find the user's active accepted application
+	var prihvacenaAplikacija models.PrihvacenaAplikacija
+	err := s.collection.FindOne(ctx, bson.M{"user_id": userID}).Decode(&prihvacenaAplikacija)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return errors.New("you do not have an active room assignment")
+		}
+		return err
+	}
+
+	// Delete the accepted application
+	result, err := s.collection.DeleteOne(ctx, bson.M{"_id": prihvacenaAplikacija.ID})
+	if err != nil {
+		return err
+	}
+
+	if result.DeletedCount == 0 {
+		return errors.New("failed to checkout from room")
+	}
+
+	return nil
+}
