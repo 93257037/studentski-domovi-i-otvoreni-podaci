@@ -33,23 +33,29 @@ func main() {
 	stDomsCollection := db.GetCollection("st_doms")
 	sobasCollection := db.GetCollection("sobas")
 	aplikacijeCollection := db.GetCollection("aplikacije")
+	prihvaceneAplikacijeCollection := db.GetCollection("prihvacene_aplikacije")
+	paymentsCollection := db.GetCollection("payments")
 
 	// Initialize services
 	stDomService := services.NewStDomService(stDomsCollection)
 	sobaService := services.NewSobaService(sobasCollection)
 	aplikacijaService := services.NewAplikacijaService(aplikacijeCollection)
+	prihvacenaAplikacijaService := services.NewPrihvacenaAplikacijaService(prihvaceneAplikacijeCollection, aplikacijaService)
+	paymentService := services.NewPaymentService(paymentsCollection)
 
 	// Initialize handlers
 	stDomHandler := handlers.NewStDomHandler(stDomService, sobaService)
 	sobaHandler := handlers.NewSobaHandler(sobaService, stDomService)
 	aplikacijaHandler := handlers.NewAplikacijaHandler(aplikacijaService, sobaService)
+	prihvacenaAplikacijaHandler := handlers.NewPrihvacenaAplikacijaHandler(prihvacenaAplikacijaService)
+	paymentHandler := handlers.NewPaymentHandler(paymentService, aplikacijaService, sobaService)
 	healthHandler := handlers.NewHealthHandler()
 
 	// Initialize Gin router
 	router := gin.Default()
 
 	// Setup routes
-	routes.SetupRoutes(router, stDomHandler, sobaHandler, aplikacijaHandler, healthHandler, cfg.JWTSecret)
+	routes.SetupRoutes(router, stDomHandler, sobaHandler, aplikacijaHandler, prihvacenaAplikacijaHandler, paymentHandler, healthHandler, cfg.JWTSecret)
 
 	// Start server
 	log.Printf("Server starting on port %s", cfg.Port)

@@ -8,7 +8,7 @@ import (
 )
 
 // SetupRoutes configures all routes for the application
-func SetupRoutes(r *gin.Engine, stDomHandler *handlers.StDomHandler, sobaHandler *handlers.SobaHandler, aplikacijaHandler *handlers.AplikacijaHandler, healthHandler *handlers.HealthHandler, jwtSecret string) {
+func SetupRoutes(r *gin.Engine, stDomHandler *handlers.StDomHandler, sobaHandler *handlers.SobaHandler, aplikacijaHandler *handlers.AplikacijaHandler, prihvacenaAplikacijaHandler *handlers.PrihvacenaAplikacijaHandler, paymentHandler *handlers.PaymentHandler, healthHandler *handlers.HealthHandler, jwtSecret string) {
 	// Add CORS middleware
 	r.Use(middleware.CORSMiddleware())
 
@@ -46,6 +46,19 @@ func SetupRoutes(r *gin.Engine, stDomHandler *handlers.StDomHandler, sobaHandler
 				aplikacije.PUT("/:id", aplikacijaHandler.UpdateAplikacija)     // User updates their own
 				aplikacije.DELETE("/:id", aplikacijaHandler.DeleteAplikacija)  // User deletes their own
 			}
+
+			// User accepted applications routes
+			prihvaceneAplikacije := user.Group("/prihvacene_aplikacije")
+			{
+				prihvaceneAplikacije.GET("/my", prihvacenaAplikacijaHandler.GetMyPrihvaceneAplikacije) // User gets their own accepted applications
+			}
+
+			// User payment routes
+			payments := user.Group("/payments")
+			{
+				payments.GET("/my", paymentHandler.GetMyPayments)       // User gets their own payments
+				payments.GET("/:id", paymentHandler.GetPayment)         // User gets their own, admin gets any
+			}
 		}
 
 		// Admin-only routes (authentication + admin role required)
@@ -74,6 +87,36 @@ func SetupRoutes(r *gin.Engine, stDomHandler *handlers.StDomHandler, sobaHandler
 			{
 				adminAplikacije.GET("/", aplikacijaHandler.GetAllAplikacije)           // Admin gets all
 				adminAplikacije.GET("/room/:sobaId", aplikacijaHandler.GetAplikacijeForRoom) // Admin gets by room
+			}
+
+			// Admin accepted applications routes (Student ranking system)
+			adminPrihvaceneAplikacije := admin.Group("/prihvacene_aplikacije")
+			{
+				adminPrihvaceneAplikacije.POST("/approve", prihvacenaAplikacijaHandler.ApproveAplikacija)                       // Approve application
+				adminPrihvaceneAplikacije.GET("/", prihvacenaAplikacijaHandler.GetAllPrihvaceneAplikacije)                    // Get all accepted applications
+				adminPrihvaceneAplikacije.GET("/:id", prihvacenaAplikacijaHandler.GetPrihvacenaAplikacija)                    // Get accepted application by ID
+				adminPrihvaceneAplikacije.GET("/user/:userId", prihvacenaAplikacijaHandler.GetPrihvaceneAplikacijeForUser)    // Get by user
+				adminPrihvaceneAplikacije.GET("/room/:sobaId", prihvacenaAplikacijaHandler.GetPrihvaceneAplikacijeForRoom)    // Get by room
+				adminPrihvaceneAplikacije.GET("/academic_year/:academicYear", prihvacenaAplikacijaHandler.GetPrihvaceneAplikacijeForAcademicYear) // Get by academic year
+				adminPrihvaceneAplikacije.GET("/ranking/top", prihvacenaAplikacijaHandler.GetTopStudentsByProsek)             // Get top students overall
+				adminPrihvaceneAplikacije.GET("/ranking/top/academic_year/:academicYear", prihvacenaAplikacijaHandler.GetTopStudentsByProsekForAcademicYear) // Get top students by year
+				adminPrihvaceneAplikacije.GET("/ranking/top/room/:sobaId", prihvacenaAplikacijaHandler.GetTopStudentsByProsekForRoom) // Get top students by room
+				adminPrihvaceneAplikacije.DELETE("/:id", prihvacenaAplikacijaHandler.DeletePrihvacenaAplikacija)               // Delete accepted application
+			}
+
+			// Admin payment routes
+			adminPayments := admin.Group("/payments")
+			{
+				adminPayments.POST("/", paymentHandler.CreatePayment)                           // Create payment
+				adminPayments.GET("/", paymentHandler.GetAllPayments)                          // Get all payments (with optional status filter)
+				adminPayments.GET("/room/:sobaId", paymentHandler.GetPaymentsByRoom)           // Get payments by room
+				adminPayments.GET("/user/:userId", paymentHandler.GetPaymentsByUser)           // Get payments by user
+				adminPayments.GET("/aplikacija/:aplikacijaId", paymentHandler.GetPaymentsByAplikacija) // Get payments by application
+				adminPayments.PUT("/:id", paymentHandler.UpdatePayment)                        // Update payment
+				adminPayments.PATCH("/:id/mark-paid", paymentHandler.MarkPaymentAsPaid)        // Mark payment as paid
+				adminPayments.PATCH("/:id/mark-unpaid", paymentHandler.MarkPaymentAsUnpaid)    // Mark payment as unpaid
+				adminPayments.DELETE("/:id", paymentHandler.DeletePayment)                     // Delete payment
+				adminPayments.POST("/update-overdue", paymentHandler.UpdateOverduePayments)    // Update overdue payments
 			}
 		}
 	}

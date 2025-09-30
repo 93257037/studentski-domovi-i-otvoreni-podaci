@@ -24,7 +24,7 @@ func LoadConfig() *Config {
 	}
 
 	config := &Config{
-		MongoDBURI:   getEnv("MONGODB_URI", "mongodb://localhost:27017"),
+		MongoDBURI:   getEnv("MONGODB_URI", "mongodb://localhost:27018"),
 		DatabaseName: getEnv("DATABASE_NAME", "sso_db"),
 		JWTSecret:    getEnv("JWT_SECRET", "default_jwt_secret_change_in_production"),
 		Port:         getEnv("PORT", "8080"),

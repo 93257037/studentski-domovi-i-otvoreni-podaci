@@ -145,6 +145,9 @@ func (s *AplikacijaService) UpdateAplikacija(id primitive.ObjectID, req models.U
 	if req.BrojIndexa != nil {
 		update["$set"].(bson.M)["broj_indexa"] = *req.BrojIndexa
 	}
+	if req.Prosek != nil {
+		update["$set"].(bson.M)["prosek"] = *req.Prosek
+	}
 	if req.IsActive != nil {
 		update["$set"].(bson.M)["is_active"] = *req.IsActive
 	}

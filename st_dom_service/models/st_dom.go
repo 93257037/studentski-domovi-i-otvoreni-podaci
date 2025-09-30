@@ -100,6 +100,7 @@ func NewSoba(req CreateSobaRequest) Soba {
 type Aplikacija struct {
 	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
 	BrojIndexa  string             `bson:"broj_indexa" json:"broj_indexa" binding:"required"`
+	Prosek      int                `bson:"prosek" json:"prosek" binding:"required,min=6,max=10"`
 	SobaID      primitive.ObjectID `bson:"soba_id" json:"soba_id" binding:"required"`
 	UserID      primitive.ObjectID `bson:"user_id" json:"user_id" binding:"required"`
 	IsActive    bool               `bson:"is_active" json:"is_active"`
@@ -110,12 +111,14 @@ type Aplikacija struct {
 // CreateAplikacijaRequest represents the request body for creating an application
 type CreateAplikacijaRequest struct {
 	BrojIndexa string             `json:"broj_indexa" binding:"required"`
+	Prosek     int                `json:"prosek" binding:"required,min=6,max=10"`
 	SobaID     primitive.ObjectID `json:"soba_id" binding:"required"`
 }
 
 // UpdateAplikacijaRequest represents the request body for updating an application
 type UpdateAplikacijaRequest struct {
 	BrojIndexa *string `json:"broj_indexa,omitempty"`
+	Prosek     *int    `json:"prosek,omitempty"`
 	IsActive   *bool   `json:"is_active,omitempty"`
 }
 
@@ -123,6 +126,7 @@ type UpdateAplikacijaRequest struct {
 func NewAplikacija(req CreateAplikacijaRequest, userID primitive.ObjectID) Aplikacija {
 	return Aplikacija{
 		BrojIndexa: req.BrojIndexa,
+		Prosek:     req.Prosek,
 		SobaID:     req.SobaID,
 		UserID:     userID,
 		IsActive:   true,
@@ -139,4 +143,108 @@ func ValidateLuksuzi(luksuzi []Luksuzi) bool {
 		}
 	}
 	return true
+}
+
+// PaymentStatus represents the payment status enum
+type PaymentStatus string
+
+const (
+	PaymentStatusPending PaymentStatus = "pending"
+	PaymentStatusPaid    PaymentStatus = "paid"
+	PaymentStatusOverdue PaymentStatus = "overdue"
+)
+
+// IsValid checks if the PaymentStatus value is valid
+func (ps PaymentStatus) IsValid() bool {
+	switch ps {
+	case PaymentStatusPending, PaymentStatusPaid, PaymentStatusOverdue:
+		return true
+	}
+	return false
+}
+
+// Payment represents a payment for a room rental
+// A payment is created after an Aplikacija (application) is approved by admin
+type Payment struct {
+	ID             primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	AplikacijaID   primitive.ObjectID `bson:"aplikacija_id" json:"aplikacija_id" binding:"required"`
+	Amount         float64            `bson:"amount" json:"amount" binding:"required,min=0"`
+	PaymentPeriod  string             `bson:"payment_period" json:"payment_period" binding:"required"` // Format: "YYYY-MM"
+	Status         PaymentStatus      `bson:"status" json:"status"`
+	PaidAt         *time.Time         `bson:"paid_at,omitempty" json:"paid_at,omitempty"`
+	DueDate        time.Time          `bson:"due_date" json:"due_date" binding:"required"`
+	Notes          string             `bson:"notes,omitempty" json:"notes,omitempty"`
+	CreatedAt      time.Time          `bson:"created_at" json:"created_at"`
+	UpdatedAt      time.Time          `bson:"updated_at" json:"updated_at"`
+}
+
+// CreatePaymentRequest represents the request body for creating a payment
+type CreatePaymentRequest struct {
+	AplikacijaID  primitive.ObjectID `json:"aplikacija_id" binding:"required"`
+	Amount        float64            `json:"amount" binding:"required,min=0"`
+	PaymentPeriod string             `json:"payment_period" binding:"required"` // Format: "YYYY-MM"
+	DueDate       time.Time          `json:"due_date" binding:"required"`
+	Notes         string             `json:"notes,omitempty"`
+}
+
+// UpdatePaymentRequest represents the request body for updating a payment
+type UpdatePaymentRequest struct {
+	Amount        *float64       `json:"amount,omitempty"`
+	PaymentPeriod *string        `json:"payment_period,omitempty"`
+	Status        *PaymentStatus `json:"status,omitempty"`
+	DueDate       *time.Time     `json:"due_date,omitempty"`
+	Notes         *string        `json:"notes,omitempty"`
+}
+
+// MarkPaymentPaidRequest represents the request body for marking payment as paid
+type MarkPaymentPaidRequest struct {
+	PaidAt *time.Time `json:"paid_at,omitempty"` // If not provided, use current time
+}
+
+// NewPayment creates a new payment with default values
+func NewPayment(req CreatePaymentRequest) Payment {
+	return Payment{
+		AplikacijaID:  req.AplikacijaID,
+		Amount:        req.Amount,
+		PaymentPeriod: req.PaymentPeriod,
+		Status:        PaymentStatusPending,
+		DueDate:       req.DueDate,
+		Notes:         req.Notes,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
+	}
+}
+
+// PrihvacenaAplikacija represents an accepted/approved application
+// This is created when an admin approves a student's application
+type PrihvacenaAplikacija struct {
+	ID             primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	AplikacijaID   primitive.ObjectID `bson:"aplikacija_id" json:"aplikacija_id" binding:"required"`
+	UserID         primitive.ObjectID `bson:"user_id" json:"user_id" binding:"required"`
+	BrojIndexa     string             `bson:"broj_indexa" json:"broj_indexa" binding:"required"`
+	Prosek         int                `bson:"prosek" json:"prosek" binding:"required,min=6,max=10"`
+	SobaID         primitive.ObjectID `bson:"soba_id" json:"soba_id" binding:"required"`
+	AcademicYear   string             `bson:"academic_year" json:"academic_year"` // Format: "2024/2025"
+	CreatedAt      time.Time          `bson:"created_at" json:"created_at"`
+	UpdatedAt      time.Time          `bson:"updated_at" json:"updated_at"`
+}
+
+// ApproveAplikacijaRequest represents the request body for approving an application
+type ApproveAplikacijaRequest struct {
+	AplikacijaID primitive.ObjectID `json:"aplikacija_id" binding:"required"`
+	AcademicYear string             `json:"academic_year" binding:"required"` // Format: "2024/2025"
+}
+
+// NewPrihvacenaAplikacija creates a new accepted application from an Aplikacija
+func NewPrihvacenaAplikacija(aplikacija *Aplikacija, academicYear string) PrihvacenaAplikacija {
+	return PrihvacenaAplikacija{
+		AplikacijaID: aplikacija.ID,
+		UserID:       aplikacija.UserID,
+		BrojIndexa:   aplikacija.BrojIndexa,
+		Prosek:       aplikacija.Prosek,
+		SobaID:       aplikacija.SobaID,
+		AcademicYear: academicYear,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	}
 }
