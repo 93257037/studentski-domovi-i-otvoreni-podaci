@@ -216,6 +216,65 @@ func (s *PaymentService) GetPaymentsByStatus(status models.PaymentStatus) ([]mod
 	return payments, nil
 }
 
+// SearchPaymentsByIndex searches payments by student index pattern (admin only)
+// Uses aggregation to join with aplikacije and filter by broj_indexa pattern
+// If status is provided, also filters by payment status
+func (s *PaymentService) SearchPaymentsByIndex(indexPattern string, status *models.PaymentStatus) ([]models.Payment, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Build aggregation pipeline
+	pipeline := mongo.Pipeline{
+		// Join with aplikacije collection
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "aplikacije"},
+			{Key: "localField", Value: "aplikacija_id"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "aplikacija"},
+		}}},
+		{{Key: "$unwind", Value: "$aplikacija"}},
+	}
+
+	// Build match conditions
+	matchConditions := bson.D{}
+	
+	// Add index pattern filter (case-insensitive regex)
+	if indexPattern != "" {
+		matchConditions = append(matchConditions, bson.E{
+			Key: "aplikacija.broj_indexa",
+			Value: bson.D{{Key: "$regex", Value: "^" + indexPattern}, {Key: "$options", Value: "i"}},
+		})
+	}
+
+	// Add status filter if provided
+	if status != nil {
+		matchConditions = append(matchConditions, bson.E{Key: "status", Value: *status})
+	}
+
+	// Add match stage if there are conditions
+	if len(matchConditions) > 0 {
+		pipeline = append(pipeline, bson.D{{Key: "$match", Value: matchConditions}})
+	}
+
+	// Remove the joined aplikacija from result to keep payment structure clean
+	pipeline = append(pipeline, bson.D{{Key: "$project", Value: bson.D{
+		{Key: "aplikacija", Value: 0},
+	}}})
+
+	cursor, err := s.collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var payments []models.Payment
+	if err = cursor.All(ctx, &payments); err != nil {
+		return nil, err
+	}
+
+	return payments, nil
+}
+
 // UpdatePayment updates a payment (admin only)
 func (s *PaymentService) UpdatePayment(id primitive.ObjectID, req models.UpdatePaymentRequest) (*models.Payment, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

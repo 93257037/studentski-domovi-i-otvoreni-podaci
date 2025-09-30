@@ -166,6 +166,42 @@ func (h *PaymentHandler) GetAllPayments(c *gin.Context) {
 	})
 }
 
+// SearchPaymentsByIndex handles searching payments by student index pattern (admin only)
+func (h *PaymentHandler) SearchPaymentsByIndex(c *gin.Context) {
+	// Get index pattern from query parameter
+	indexPattern := c.Query("index")
+	if indexPattern == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Index pattern is required"})
+		return
+	}
+
+	// Get optional status filter
+	var statusPtr *models.PaymentStatus
+	statusParam := c.Query("status")
+	if statusParam != "" {
+		status := models.PaymentStatus(statusParam)
+		if !status.IsValid() {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payment status. Valid values: pending, paid, overdue"})
+			return
+		}
+		statusPtr = &status
+	}
+
+	// Search payments
+	payments, err := h.paymentService.SearchPaymentsByIndex(indexPattern, statusPtr)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"payments": payments,
+		"count":    len(payments),
+		"index_pattern": indexPattern,
+		"status": statusParam,
+	})
+}
+
 // GetPaymentsByRoom handles retrieving all payments for a specific room (admin only)
 func (h *PaymentHandler) GetPaymentsByRoom(c *gin.Context) {
 	idParam := c.Param("sobaId")

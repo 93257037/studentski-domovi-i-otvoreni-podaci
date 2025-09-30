@@ -111,6 +111,7 @@ func SetupRoutes(r *gin.Engine, stDomHandler *handlers.StDomHandler, sobaHandler
 			{
 				adminPayments.POST("/", paymentHandler.CreatePayment)                           // Create payment
 				adminPayments.GET("/", paymentHandler.GetAllPayments)                          // Get all payments (with optional status filter)
+				adminPayments.GET("/search", paymentHandler.SearchPaymentsByIndex)             // Search payments by student index pattern
 				adminPayments.GET("/room/:sobaId", paymentHandler.GetPaymentsByRoom)           // Get payments by room
 				adminPayments.GET("/user/:userId", paymentHandler.GetPaymentsByUser)           // Get payments by user
 				adminPayments.GET("/aplikacija/:aplikacijaId", paymentHandler.GetPaymentsByAplikacija) // Get payments by application
