@@ -30,6 +30,7 @@ func (l Luksuzi) IsValid() bool {
 // StDom represents a student dormitory
 type StDom struct {
 	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	Ime           string             `bson:"ime" json:"ime"`
 	Address       string             `bson:"address" json:"address"`
 	TelephoneNumber string           `bson:"telephone_number" json:"telephone_number"`
 	Email         string             `bson:"email" json:"email"`

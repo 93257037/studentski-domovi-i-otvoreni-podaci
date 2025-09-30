@@ -167,13 +167,73 @@ func (s *OpenDataService) SearchStDomsByAddress(addressPattern string) ([]models
 	return stDoms, nil
 }
 
-// AdvancedFilterRooms provides a comprehensive filtering endpoint combining multiple criteria
-// Allows filtering by luksuzi, st_dom_id, krevetnost (exact, min, max) all at once
-func (s *OpenDataService) AdvancedFilterRooms(luksuzi []models.Luksuzi, stDomID *primitive.ObjectID, exact *int, min *int, max *int) ([]models.SobaWithStDom, error) {
+// SearchStDomsByIme searches student dormitories by name using regex pattern matching
+// Returns dormitories whose ime (name) matches the provided pattern
+func (s *OpenDataService) SearchStDomsByIme(imePattern string) ([]models.StDom, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Build comprehensive filter
+	// Use regex for partial matching (case-insensitive)
+	filter := bson.M{
+		"ime": bson.M{
+			"$regex":   imePattern,
+			"$options": "i", // case-insensitive
+		},
+	}
+
+	cursor, err := s.stDomsCollection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var stDoms []models.StDom
+	if err = cursor.All(ctx, &stDoms); err != nil {
+		return nil, err
+	}
+
+	return stDoms, nil
+}
+
+// AdvancedFilterRooms provides a comprehensive filtering endpoint combining multiple criteria
+// Allows filtering by luksuzi, st_dom_id, krevetnost (exact, min, max), and address pattern all at once
+func (s *OpenDataService) AdvancedFilterRooms(luksuzi []models.Luksuzi, stDomID *primitive.ObjectID, addressPattern string, exact *int, min *int, max *int) ([]models.SobaWithStDom, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// If address pattern is provided, first find matching dormitories
+	var matchingStDomIDs []primitive.ObjectID
+	if addressPattern != "" {
+		stDomFilter := bson.M{
+			"address": bson.M{
+				"$regex":   addressPattern,
+				"$options": "i", // case-insensitive
+			},
+		}
+		
+		stDomsCursor, err := s.stDomsCollection.Find(ctx, stDomFilter)
+		if err != nil {
+			return nil, err
+		}
+		defer stDomsCursor.Close(ctx)
+
+		var matchingStDoms []models.StDom
+		if err = stDomsCursor.All(ctx, &matchingStDoms); err != nil {
+			return nil, err
+		}
+
+		// Extract IDs
+		for _, stDom := range matchingStDoms {
+			matchingStDomIDs = append(matchingStDomIDs, stDom.ID)
+		}
+
+		// If no dormitories match the address pattern, return empty result
+		if len(matchingStDomIDs) == 0 {
+			return []models.SobaWithStDom{}, nil
+		}
+	}
+
+	// Build comprehensive filter for rooms
 	filter := bson.M{}
 	
 	// Filter by luxury amenities
@@ -181,9 +241,13 @@ func (s *OpenDataService) AdvancedFilterRooms(luksuzi []models.Luksuzi, stDomID 
 		filter["luksuzi"] = bson.M{"$all": luksuzi}
 	}
 	
-	// Filter by student dormitory
+	// Filter by student dormitory (either specific ID or address pattern matches)
 	if stDomID != nil {
+		// Specific dormitory ID provided
 		filter["st_dom_id"] = *stDomID
+	} else if len(matchingStDomIDs) > 0 {
+		// Address pattern provided - filter by matching dormitory IDs
+		filter["st_dom_id"] = bson.M{"$in": matchingStDomIDs}
 	}
 	
 	// Filter by krevetnost

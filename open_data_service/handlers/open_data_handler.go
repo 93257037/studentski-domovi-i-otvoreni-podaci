@@ -237,14 +237,49 @@ func (h *OpenDataHandler) SearchStDomsByAddress(c *gin.Context) {
 	})
 }
 
+// SearchStDomsByIme godoc
+// @Summary Search student dormitories by name
+// @Description Search student dormitories using regex pattern matching on ime (name) field
+// @Tags Open Data
+// @Accept json
+// @Produce json
+// @Param ime query string true "Name search pattern (supports regex)"
+// @Success 200 {object} map[string]interface{} "List of student dormitories"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /api/v1/st-doms/search-by-ime [get]
+func (h *OpenDataHandler) SearchStDomsByIme(c *gin.Context) {
+	imePattern := c.Query("ime")
+	if imePattern == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "ime parameter is required",
+		})
+		return
+	}
+
+	stDoms, err := h.service.SearchStDomsByIme(imePattern)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to search student dormitories",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":  stDoms,
+		"count": len(stDoms),
+	})
+}
+
 // AdvancedFilterRooms godoc
 // @Summary Advanced room filtering
-// @Description Filter rooms using multiple criteria: luxury amenities, student dormitory, and bed capacity
+// @Description Filter rooms using multiple criteria: luxury amenities, student dormitory, address, and bed capacity
 // @Tags Open Data
 // @Accept json
 // @Produce json
 // @Param luksuzi query string false "Comma-separated list of luxury amenities" example="klima,terasa"
 // @Param st_dom_id query string false "Student dormitory ID"
+// @Param address query string false "Address search pattern (regex, case-insensitive)"
 // @Param exact query int false "Exact bed capacity"
 // @Param min query int false "Minimum bed capacity"
 // @Param max query int false "Maximum bed capacity"
@@ -284,6 +319,9 @@ func (h *OpenDataHandler) AdvancedFilterRooms(c *gin.Context) {
 		}
 		stDomID = &id
 	}
+
+	// Parse address pattern
+	addressPattern := c.Query("address")
 
 	// Parse krevetnost parameters
 	var exact, min, max *int
@@ -329,7 +367,7 @@ func (h *OpenDataHandler) AdvancedFilterRooms(c *gin.Context) {
 		return
 	}
 
-	rooms, err := h.service.AdvancedFilterRooms(luksuzi, stDomID, exact, min, max)
+	rooms, err := h.service.AdvancedFilterRooms(luksuzi, stDomID, addressPattern, exact, min, max)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to filter rooms",

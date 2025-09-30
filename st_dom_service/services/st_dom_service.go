@@ -94,6 +94,9 @@ func (s *StDomService) UpdateStDom(id primitive.ObjectID, req models.UpdateStDom
 
 	// Build update document
 	update := bson.M{"$set": bson.M{"updated_at": time.Now()}}
+	if req.Ime != nil {
+		update["$set"].(bson.M)["ime"] = *req.Ime
+	}
 	if req.Address != nil {
 		update["$set"].(bson.M)["address"] = *req.Address
 	}

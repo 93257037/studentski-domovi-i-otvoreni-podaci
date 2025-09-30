@@ -30,6 +30,7 @@ func (l Luksuzi) IsValid() bool {
 // StDom represents a student dormitory
 type StDom struct {
 	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	Ime           string             `bson:"ime" json:"ime" binding:"required"`
 	Address       string             `bson:"address" json:"address" binding:"required"`
 	TelephoneNumber string           `bson:"telephone_number" json:"telephone_number" binding:"required"`
 	Email         string             `bson:"email" json:"email" binding:"required,email"`
@@ -49,6 +50,7 @@ type Soba struct {
 
 // CreateStDomRequest represents the request body for creating a student dormitory
 type CreateStDomRequest struct {
+	Ime             string `json:"ime" binding:"required"`
 	Address         string `json:"address" binding:"required"`
 	TelephoneNumber string `json:"telephone_number" binding:"required"`
 	Email           string `json:"email" binding:"required,email"`
@@ -56,6 +58,7 @@ type CreateStDomRequest struct {
 
 // UpdateStDomRequest represents the request body for updating a student dormitory
 type UpdateStDomRequest struct {
+	Ime             *string `json:"ime,omitempty"`
 	Address         *string `json:"address,omitempty"`
 	TelephoneNumber *string `json:"telephone_number,omitempty"`
 	Email           *string `json:"email,omitempty"`
@@ -77,6 +80,7 @@ type UpdateSobaRequest struct {
 // NewStDom creates a new student dormitory with default values
 func NewStDom(req CreateStDomRequest) StDom {
 	return StDom{
+		Ime:             req.Ime,
 		Address:         req.Address,
 		TelephoneNumber: req.TelephoneNumber,
 		Email:           req.Email,

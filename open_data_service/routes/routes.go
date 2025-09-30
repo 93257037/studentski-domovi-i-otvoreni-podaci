@@ -33,6 +33,7 @@ func SetupRoutes(r *gin.Engine, handler *handlers.OpenDataHandler) {
 		{
 			stDoms.GET("", handler.GetAllStDoms)                          // Get all student dormitories
 			stDoms.GET("/search-by-address", handler.SearchStDomsByAddress) // Search by address (regex)
+			stDoms.GET("/search-by-ime", handler.SearchStDomsByIme)         // Search by name (regex)
 		}
 	}
 }
