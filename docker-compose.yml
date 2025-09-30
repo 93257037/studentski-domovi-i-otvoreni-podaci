@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   sso_service:
-    build: .
+    build: ./sso_service
     ports:
       - "8080:8080"
     environment:
@@ -14,7 +14,22 @@ services:
     depends_on:
       - mongodb
     networks:
-      - sso_network
+      - app_network
+
+  st_dom_service:
+    build: ./st_dom_service
+    ports:
+      - "8081:8081"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017
+      - DATABASE_NAME=st_dom_db
+      - JWT_SECRET=your_jwt_secret_key_here_change_in_production
+      - PORT=8081
+      - GIN_MODE=release
+    depends_on:
+      - mongodb
+    networks:
+      - app_network
 
   mongodb:
     image: mongo:7.0
@@ -23,12 +38,12 @@ services:
     volumes:
       - mongodb_data:/data/db
     networks:
-      - sso_network
+      - app_network
 
 volumes:
   mongodb_data:
 
 networks:
-  sso_network:
+  app_network:
     driver: bridge
 
