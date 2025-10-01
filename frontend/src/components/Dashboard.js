@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import AddStDomModal from './AddStDomModal';
 import './Dashboard.css';
 
 const Dashboard = () => {
   const { user, logout, deleteAccount } = useAuth();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showAddStDomModal, setShowAddStDomModal] = useState(false);
 
   const handleDeleteAccount = async () => {
     setDeleteLoading(true);
@@ -27,6 +29,12 @@ const Dashboard = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const handleStDomSuccess = () => {
+    // You can add logic here to refresh the list of dormitories
+    // For now, we'll just show a success message
+    alert('Studentski dom je uspješno kreiran!');
   };
 
   return (
@@ -72,6 +80,14 @@ const Dashboard = () => {
         <div className="actions-card">
           <h2>Akcije</h2>
           <div className="action-buttons">
+            {user?.role === 'admin' && (
+              <button 
+                onClick={() => setShowAddStDomModal(true)}
+                className="add-st-dom-button"
+              >
+                Dodaj studentski dom
+              </button>
+            )}
             <button 
               onClick={() => setShowDeleteModal(true)}
               className="delete-account-button"
@@ -108,6 +124,12 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+
+      <AddStDomModal
+        isOpen={showAddStDomModal}
+        onClose={() => setShowAddStDomModal(false)}
+        onSuccess={handleStDomSuccess}
+      />
     </div>
   );
 };
