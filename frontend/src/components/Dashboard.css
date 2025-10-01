@@ -447,7 +447,8 @@
   background: #c82333;
 }
 
-.add-st-dom-button {
+.add-st-dom-button,
+.add-room-button {
   background: #28a745;
   color: white;
   border: none;
@@ -459,8 +460,65 @@
   transition: background-color 0.3s ease;
 }
 
-.add-st-dom-button:hover {
+.add-st-dom-button:hover,
+.add-room-button:hover {
   background: #218838;
+}
+
+.add-room-button {
+  background: #17a2b8;
+}
+
+.add-room-button:hover {
+  background: #138496;
+}
+
+.apply-for-room-button {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 5px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.apply-for-room-button:hover {
+  background: #0056b3;
+}
+
+.manage-applications-button {
+  background: #ff9800;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 5px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.manage-applications-button:hover {
+  background: #f57c00;
+}
+
+.manage-rooms-button {
+  background: #9c27b0;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 5px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.manage-rooms-button:hover {
+  background: #7b1fa2;
 }
 
 /* Modal styles */

@@ -13,13 +13,15 @@ import (
 
 // SobaService handles room-related operations
 type SobaService struct {
-	collection *mongo.Collection
+	collection                      *mongo.Collection
+	prihvaceneAplikacijeCollection *mongo.Collection
 }
 
 // NewSobaService creates a new SobaService
-func NewSobaService(collection *mongo.Collection) *SobaService {
+func NewSobaService(collection *mongo.Collection, prihvaceneAplikacijeCollection *mongo.Collection) *SobaService {
 	return &SobaService{
-		collection: collection,
+		collection:                      collection,
+		prihvaceneAplikacijeCollection: prihvaceneAplikacijeCollection,
 	}
 }
 
@@ -159,4 +161,56 @@ func (s *SobaService) DeleteSobasByStDomID(stDomID primitive.ObjectID) error {
 
 	_, err := s.collection.DeleteMany(ctx, bson.M{"st_dom_id": stDomID})
 	return err
+}
+
+// GetAvailableSobasByStDomID retrieves all available rooms for a specific dormitory
+// A room is available if the number of accepted applications is less than its capacity (krevetnost)
+func (s *SobaService) GetAvailableSobasByStDomID(stDomID primitive.ObjectID) ([]models.Soba, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Aggregation pipeline to join with prihvacene_aplikacije and count occupancy
+	pipeline := mongo.Pipeline{
+		// Match rooms in this dormitory
+		{{Key: "$match", Value: bson.D{{Key: "st_dom_id", Value: stDomID}}}},
+		
+		// Lookup to count how many students are in each room
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "prihvacene_aplikacije"},
+			{Key: "localField", Value: "_id"},
+			{Key: "foreignField", Value: "soba_id"},
+			{Key: "as", Value: "occupants"},
+		}}},
+		
+		// Add field to count occupants
+		{{Key: "$addFields", Value: bson.D{
+			{Key: "current_occupancy", Value: bson.D{{Key: "$size", Value: "$occupants"}}},
+		}}},
+		
+		// Filter: only rooms where current_occupancy < krevetnost (has space)
+		{{Key: "$match", Value: bson.D{
+			{Key: "$expr", Value: bson.D{
+				{Key: "$lt", Value: bson.A{"$current_occupancy", "$krevetnost"}},
+			}},
+		}}},
+		
+		// Remove the occupants array and current_occupancy field from results
+		{{Key: "$project", Value: bson.D{
+			{Key: "occupants", Value: 0},
+			{Key: "current_occupancy", Value: 0},
+		}}},
+	}
+
+	cursor, err := s.collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var sobas []models.Soba
+	if err = cursor.All(ctx, &sobas); err != nil {
+		return nil, err
+	}
+
+	return sobas, nil
 }

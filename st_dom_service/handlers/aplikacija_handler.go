@@ -262,7 +262,7 @@ func (h *AplikacijaHandler) UpdateAplikacija(c *gin.Context) {
 	})
 }
 
-// DeleteAplikacija handles deleting an application (user can delete their own)
+// DeleteAplikacija handles deleting an application (user can delete their own, admin can delete any)
 func (h *AplikacijaHandler) DeleteAplikacija(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idParam)
@@ -271,6 +271,28 @@ func (h *AplikacijaHandler) DeleteAplikacija(c *gin.Context) {
 		return
 	}
 
+	// Extract user role from JWT token
+	userRole, roleExists := c.Get("role")
+	if !roleExists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User role not found in token"})
+		return
+	}
+
+	// If admin, allow deletion of any application
+	if userRole == "admin" {
+		err = h.aplikacijaService.DeleteAplikacijaByID(id)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Application deleted successfully",
+		})
+		return
+	}
+
+	// For regular users, only allow deletion of their own applications
 	// Extract user ID from JWT token
 	userIDClaim, exists := c.Get("userID")
 	if !exists {

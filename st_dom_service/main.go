@@ -38,10 +38,10 @@ func main() {
 
 	// Initialize services
 	stDomService := services.NewStDomService(stDomsCollection)
-	sobaService := services.NewSobaService(sobasCollection)
+	sobaService := services.NewSobaService(sobasCollection, prihvaceneAplikacijeCollection)
 	aplikacijaService := services.NewAplikacijaService(aplikacijeCollection)
-	prihvacenaAplikacijaService := services.NewPrihvacenaAplikacijaService(prihvaceneAplikacijeCollection, aplikacijaService)
 	paymentService := services.NewPaymentService(paymentsCollection)
+	prihvacenaAplikacijaService := services.NewPrihvacenaAplikacijaService(prihvaceneAplikacijeCollection, aplikacijaService, paymentService)
 
 	// Initialize handlers
 	stDomHandler := handlers.NewStDomHandler(stDomService, sobaService)

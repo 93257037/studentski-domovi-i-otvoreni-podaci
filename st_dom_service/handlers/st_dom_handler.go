@@ -132,6 +132,7 @@ func (h *StDomHandler) DeleteStDom(c *gin.Context) {
 }
 
 // GetStDomRooms handles retrieving all rooms for a specific dormitory
+// Returns only available rooms (not fully occupied)
 func (h *StDomHandler) GetStDomRooms(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idParam)
@@ -147,8 +148,8 @@ func (h *StDomHandler) GetStDomRooms(c *gin.Context) {
 		return
 	}
 
-	// Get rooms
-	sobas, err := h.sobaService.GetSobasByStDomID(id)
+	// Get available rooms (only rooms with space left)
+	sobas, err := h.sobaService.GetAvailableSobasByStDomID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

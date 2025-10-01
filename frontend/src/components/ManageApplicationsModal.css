@@ -1,0 +1,283 @@
+.manage-applications-modal {
+  max-width: 900px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.academic-year-input {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: #e3f2fd;
+  border-radius: 6px;
+  border-left: 4px solid #2196F3;
+}
+
+.academic-year-input label {
+  font-weight: 500;
+  color: #1976D2;
+  font-size: 0.95rem;
+}
+
+.academic-year-input input {
+  padding: 0.75rem;
+  border: 1px solid #90caf9;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.academic-year-input input:focus {
+  outline: none;
+  border-color: #2196F3;
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.academic-year-input input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+/* Applications List */
+.applications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: 55vh;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.application-card {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.application-card:hover {
+  border-color: #2196F3;
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.1);
+}
+
+.application-card.inactive {
+  background: #fafafa;
+  border-color: #bdbdbd;
+  opacity: 0.7;
+}
+
+.application-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.info-row .label {
+  font-weight: 500;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.info-row .value {
+  color: #333;
+  font-weight: 600;
+  font-size: 0.95rem;
+  word-break: break-all;
+}
+
+.info-row .status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.info-row .status.active {
+  background-color: #c8e6c9;
+  color: #2e7d32;
+}
+
+.info-row .status.inactive {
+  background-color: #ffcdd2;
+  color: #c62828;
+}
+
+/* Application Actions */
+.application-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 120px;
+}
+
+.approve-button,
+.reject-button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.approve-button {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.approve-button:hover:not(:disabled) {
+  background-color: #45a049;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+}
+
+.reject-button {
+  background-color: #f44336;
+  color: white;
+}
+
+.reject-button:hover:not(:disabled) {
+  background-color: #d32f2f;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
+}
+
+.approve-button:disabled,
+.reject-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Modal Footer */
+.modal-buttons {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.close-modal-button {
+  padding: 0.75rem 2rem;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.close-modal-button:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.close-modal-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Loading and Error States */
+.loading-text {
+  padding: 3rem;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  font-size: 1.1rem;
+}
+
+.error-message {
+  padding: 1rem;
+  background-color: #ffebee;
+  color: #c62828;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+  border-left: 4px solid #f44336;
+}
+
+.no-data {
+  text-align: center;
+  color: #999;
+  font-style: italic;
+  padding: 3rem;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 2px dashed #ddd;
+  font-size: 1.1rem;
+}
+
+/* Scrollbar Styling */
+.applications-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.applications-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.applications-list::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.applications-list::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .manage-applications-modal {
+    width: 95%;
+    max-height: 90vh;
+  }
+
+  .application-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .application-actions {
+    flex-direction: row;
+    width: 100%;
+  }
+
+  .approve-button,
+  .reject-button {
+    flex: 1;
+  }
+
+  .info-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .info-row .value {
+    font-size: 0.9rem;
+  }
+}
+

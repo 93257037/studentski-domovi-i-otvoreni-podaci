@@ -193,6 +193,23 @@ func (s *AplikacijaService) DeleteAplikacija(id primitive.ObjectID, userID primi
 	return nil
 }
 
+// DeleteAplikacijaByID deletes an application by ID without ownership check (admin only)
+func (s *AplikacijaService) DeleteAplikacijaByID(id primitive.ObjectID) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	result, err := s.collection.DeleteOne(ctx, bson.M{"_id": id})
+	if err != nil {
+		return err
+	}
+
+	if result.DeletedCount == 0 {
+		return errors.New("application not found")
+	}
+
+	return nil
+}
+
 // GetAllAplikacije retrieves all applications (admin only)
 func (s *AplikacijaService) GetAllAplikacije() ([]models.Aplikacija, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

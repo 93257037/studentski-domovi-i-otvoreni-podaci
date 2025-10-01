@@ -1,0 +1,323 @@
+.apply-room-modal {
+  max-width: 700px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.apply-step {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.selected-info {
+  background-color: #e3f2fd;
+  border-left: 4px solid #2196F3;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.selected-info p {
+  margin: 0.5rem 0;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.selected-info strong {
+  color: #1976D2;
+}
+
+/* Student Dorm List */
+.stdom-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.stdom-card {
+  background: #6c757d;
+  color: white !important;
+  padding: 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.stdom-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: #5a6268;
+}
+
+.stdom-card * {
+  color: white !important;
+}
+
+.stdom-card h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.stdom-card p {
+  margin: 0.4rem 0;
+  font-size: 0.9rem;
+}
+
+.stdom-card strong {
+  font-weight: 600;
+}
+
+/* Room List */
+.room-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.room-card {
+  background: white;
+  color: #333;
+  padding: 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  border: 2px solid #e0e0e0;
+}
+
+.room-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  border-color: #11998e;
+}
+
+.room-card h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333 !important;
+}
+
+.room-card p {
+  margin: 0.5rem 0;
+  font-size: 0.95rem;
+  color: #555 !important;
+}
+
+.room-card strong {
+  font-weight: 600;
+  color: #333 !important;
+}
+
+.amenities {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.amenities strong {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #333 !important;
+}
+
+.amenities ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  list-style: none;
+}
+
+.amenities li {
+  position: relative;
+  padding-left: 0.5rem;
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+  color: #555 !important;
+}
+
+.amenities li::before {
+  content: '✓';
+  position: absolute;
+  left: -1rem;
+  font-weight: bold;
+  color: #11998e;
+}
+
+/* Application Form */
+.application-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.application-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.application-form label {
+  font-weight: 500;
+  color: #333;
+}
+
+.application-form input {
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.application-form input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.application-form input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+/* Buttons */
+.modal-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.back-button,
+.submit-button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.back-button {
+  background-color: #6c757d;
+  color: white;
+}
+
+.back-button:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.submit-button {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.submit-button:hover:not(:disabled) {
+  background-color: #45a049;
+}
+
+.back-button:disabled,
+.submit-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Loading and Error States */
+.loading-text {
+  padding: 2rem;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+}
+
+.error-message {
+  padding: 0.75rem;
+  background-color: #ffebee;
+  color: #c62828;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.no-data {
+  text-align: center;
+  color: #999;
+  font-style: italic;
+  padding: 2rem;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 1px dashed #ddd;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .apply-room-modal {
+    width: 95%;
+    max-height: 90vh;
+  }
+
+  .room-list {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-buttons {
+    flex-direction: column;
+  }
+
+  .back-button,
+  .submit-button {
+    width: 100%;
+  }
+
+  .stdom-card,
+  .room-card {
+    padding: 1rem;
+  }
+
+  .stdom-card h4 {
+    font-size: 1.1rem;
+  }
+
+  .room-card h4 {
+    font-size: 1rem;
+  }
+}
+
+/* Scrollbar Styling */
+.stdom-list::-webkit-scrollbar,
+.room-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.stdom-list::-webkit-scrollbar-track,
+.room-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.stdom-list::-webkit-scrollbar-thumb,
+.room-list::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.stdom-list::-webkit-scrollbar-thumb:hover,
+.room-list::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+

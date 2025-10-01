@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"st_dom_service/config"
 	"st_dom_service/models"
 	"time"
 
@@ -16,13 +17,15 @@ import (
 type PrihvacenaAplikacijaService struct {
 	collection          *mongo.Collection
 	aplikacijaService   *AplikacijaService
+	paymentService      *PaymentService
 }
 
 // NewPrihvacenaAplikacijaService creates a new PrihvacenaAplikacijaService
-func NewPrihvacenaAplikacijaService(collection *mongo.Collection, aplikacijaService *AplikacijaService) *PrihvacenaAplikacijaService {
+func NewPrihvacenaAplikacijaService(collection *mongo.Collection, aplikacijaService *AplikacijaService, paymentService *PaymentService) *PrihvacenaAplikacijaService {
 	return &PrihvacenaAplikacijaService{
 		collection:        collection,
 		aplikacijaService: aplikacijaService,
+		paymentService:    paymentService,
 	}
 }
 
@@ -64,6 +67,38 @@ func (s *PrihvacenaAplikacijaService) ApproveAplikacija(req models.ApproveAplika
 	}
 
 	prihvacenaAplikacija.ID = result.InsertedID.(primitive.ObjectID)
+
+	// AUTO-CREATE INITIAL PAYMENT (Option 1 implementation)
+	// IMPORTANT: Create payment BEFORE marking application as inactive
+	// because payment creation checks if application is active
+	paymentConfig := config.GetPaymentConfig()
+	
+	if paymentConfig.AutoCreateOnApproval {
+		currentTime := time.Now()
+		paymentPeriod := currentTime.Format("2006-01") // e.g., "2024-10"
+		
+		// Due date: configured day of the current month, or next month if we're past that day
+		dueDate := time.Date(currentTime.Year(), currentTime.Month(), paymentConfig.DefaultDueDay, 23, 59, 59, 0, time.UTC)
+		if currentTime.Day() > paymentConfig.DefaultDueDay {
+			// If we're past the due day, set due date to that day of next month
+			dueDate = time.Date(currentTime.Year(), currentTime.Month()+1, paymentConfig.DefaultDueDay, 23, 59, 59, 0, time.UTC)
+		}
+		
+		paymentReq := models.CreatePaymentRequest{
+			AplikacijaID:  aplikacija.ID,
+			Amount:        paymentConfig.DefaultAmount,
+			PaymentPeriod: paymentPeriod,
+			DueDate:       dueDate,
+			Notes:         "Initial payment for academic year " + req.AcademicYear,
+		}
+		
+		_, err = s.paymentService.CreatePayment(paymentReq, aplikacija)
+		if err != nil {
+			// Log the error but don't fail - payment can be created manually later
+			// In production, you might want to log this properly
+			// For now, we continue with the approval process
+		}
+	}
 
 	// Mark the original application as inactive (accepted)
 	isActive := false

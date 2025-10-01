@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AddStDomModal from './AddStDomModal';
+import AddRoomModal from './AddRoomModal';
+import ApplyForRoomModal from './ApplyForRoomModal';
+import ManageApplicationsModal from './ManageApplicationsModal';
+import ManageRoomsModal from './ManageRoomsModal';
+import MyRoomInfo from './MyRoomInfo';
 import { openDataService } from '../services/openDataService';
 import './Dashboard.css';
 
@@ -9,6 +14,10 @@ const Dashboard = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showAddStDomModal, setShowAddStDomModal] = useState(false);
+  const [showAddRoomModal, setShowAddRoomModal] = useState(false);
+  const [showApplyForRoomModal, setShowApplyForRoomModal] = useState(false);
+  const [showManageApplicationsModal, setShowManageApplicationsModal] = useState(false);
+  const [showManageRoomsModal, setShowManageRoomsModal] = useState(false);
   
   // Search states
   const [imeSearch, setImeSearch] = useState('');
@@ -56,6 +65,33 @@ const Dashboard = () => {
     // You can add logic here to refresh the list of dormitories
     // For now, we'll just show a success message
     alert('Studentski dom je uspješno kreiran!');
+  };
+
+  const handleRoomSuccess = () => {
+    // You can add logic here to refresh the list of rooms
+    // For now, we'll just show a success message
+    alert('Soba je uspješno kreirana!');
+  };
+
+  const handleApplicationSuccess = () => {
+    alert('Aplikacija je uspješno poslata!');
+    // Reload page to check for new room assignment
+    window.location.reload();
+  };
+
+  const handleCheckout = () => {
+    // Reload page after checkout
+    window.location.reload();
+  };
+
+  const handleManageApplicationsSuccess = () => {
+    // Callback after approving/rejecting applications
+    // You can add logic here if needed
+  };
+
+  const handleManageRoomsSuccess = () => {
+    // Callback after room management actions
+    // You can add logic here if needed
   };
 
   // Search functions
@@ -184,12 +220,39 @@ const Dashboard = () => {
         <div className="actions-card">
           <h2>Akcije</h2>
           <div className="action-buttons">
-            {user?.role === 'admin' && (
+            {user?.role === 'admin' ? (
+              <>
+                <button 
+                  onClick={() => setShowAddStDomModal(true)}
+                  className="add-st-dom-button"
+                >
+                  Dodaj studentski dom
+                </button>
+                <button 
+                  onClick={() => setShowAddRoomModal(true)}
+                  className="add-room-button"
+                >
+                  Dodaj sobu
+                </button>
+                <button 
+                  onClick={() => setShowManageApplicationsModal(true)}
+                  className="manage-applications-button"
+                >
+                  Upravljaj aplikacijama
+                </button>
+                <button 
+                  onClick={() => setShowManageRoomsModal(true)}
+                  className="manage-rooms-button"
+                >
+                  Upravljaj sobama
+                </button>
+              </>
+            ) : (
               <button 
-                onClick={() => setShowAddStDomModal(true)}
-                className="add-st-dom-button"
+                onClick={() => setShowApplyForRoomModal(true)}
+                className="apply-for-room-button"
               >
-                Dodaj studentski dom
+                Apliciraj za sobu
               </button>
             )}
             <button 
@@ -200,6 +263,11 @@ const Dashboard = () => {
             </button>
           </div>
         </div>
+
+        {/* My Room Info Section (for regular users) */}
+        {user?.role === 'user' && (
+          <MyRoomInfo onCheckout={handleCheckout} />
+        )}
 
         {/* Statistics Section */}
         <div className="statistics-section">
@@ -412,6 +480,30 @@ const Dashboard = () => {
         isOpen={showAddStDomModal}
         onClose={() => setShowAddStDomModal(false)}
         onSuccess={handleStDomSuccess}
+      />
+
+      <AddRoomModal
+        isOpen={showAddRoomModal}
+        onClose={() => setShowAddRoomModal(false)}
+        onSuccess={handleRoomSuccess}
+      />
+
+      <ApplyForRoomModal
+        isOpen={showApplyForRoomModal}
+        onClose={() => setShowApplyForRoomModal(false)}
+        onSuccess={handleApplicationSuccess}
+      />
+
+      <ManageApplicationsModal
+        isOpen={showManageApplicationsModal}
+        onClose={() => setShowManageApplicationsModal(false)}
+        onSuccess={handleManageApplicationsSuccess}
+      />
+
+      <ManageRoomsModal
+        isOpen={showManageRoomsModal}
+        onClose={() => setShowManageRoomsModal(false)}
+        onSuccess={handleManageRoomsSuccess}
       />
     </div>
   );
