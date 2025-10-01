@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AddStDomModal from './AddStDomModal';
 import AddRoomModal from './AddRoomModal';
@@ -177,6 +177,11 @@ const Dashboard = () => {
     }
   };
 
+  // Load statistics when component mounts
+  useEffect(() => {
+    fetchStatistics();
+  }, []);
+
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
@@ -293,13 +298,14 @@ const Dashboard = () => {
                 <h3>Najnaseljeniji domovi</h3>
                 {statistics.topFull.length > 0 ? (
                   <div className="statistics-list">
-                    {statistics.topFull.map((stDom, index) => (
-                      <div key={stDom._id || index} className="statistics-item">
+                    {statistics.topFull.map((stat, index) => (
+                      <div key={stat.st_dom?._id || index} className="statistics-item">
                         <div className="rank">#{index + 1}</div>
                         <div className="info">
-                          <h4>{stDom.ime}</h4>
-                          <p>Broj stanara: {stDom.broj_stanara || 'N/A'}</p>
-                          <p>Adresa: {stDom.address}</p>
+                          <h4>{stat.st_dom?.ime}</h4>
+                          <p>Broj stanara: {stat.occupied_count || 'N/A'}</p>
+                          <p>Kapacitet: {stat.total_capacity || 'N/A'}</p>
+                          <p>Adresa: {stat.st_dom?.address}</p>
                         </div>
                       </div>
                     ))}
@@ -314,13 +320,14 @@ const Dashboard = () => {
                 <h3>Najmanje naseljeni domovi</h3>
                 {statistics.topEmpty.length > 0 ? (
                   <div className="statistics-list">
-                    {statistics.topEmpty.map((stDom, index) => (
-                      <div key={stDom._id || index} className="statistics-item">
+                    {statistics.topEmpty.map((stat, index) => (
+                      <div key={stat.st_dom?._id || index} className="statistics-item">
                         <div className="rank">#{index + 1}</div>
                         <div className="info">
-                          <h4>{stDom.ime}</h4>
-                          <p>Broj stanara: {stDom.broj_stanara || 'N/A'}</p>
-                          <p>Adresa: {stDom.address}</p>
+                          <h4>{stat.st_dom?.ime}</h4>
+                          <p>Broj stanara: {stat.occupied_count || 'N/A'}</p>
+                          <p>Kapacitet: {stat.total_capacity || 'N/A'}</p>
+                          <p>Adresa: {stat.st_dom?.address}</p>
                         </div>
                       </div>
                     ))}
@@ -330,32 +337,39 @@ const Dashboard = () => {
                 )}
               </div>
 
-              {/* Most Applied For */}
+              {/* Combined Single Statistics */}
               <div className="statistics-card">
-                <h3>Dom s najviše prijava</h3>
-                {statistics.mostApplications ? (
-                  <div className="statistics-single">
-                    <h4>{statistics.mostApplications.ime}</h4>
-                    <p>Broj prijava: {statistics.mostApplications.broj_prijava || 'N/A'}</p>
-                    <p>Adresa: {statistics.mostApplications.address}</p>
+                <h3>Najkonkurentniji domovi</h3>
+                <div className="statistics-combined">
+                  {/* Most Applications */}
+                  <div className="statistics-single-item">
+                    <h4>Dom s najviše prijava</h4>
+                    {statistics.mostApplications ? (
+                      <div className="statistics-single">
+                        <h5>{statistics.mostApplications.st_dom?.ime}</h5>
+                        <p>Broj prijava: {statistics.mostApplications.application_count || 'N/A'}</p>
+                        <p>Adresa: {statistics.mostApplications.st_dom?.address}</p>
+                      </div>
+                    ) : (
+                      <p className="no-data">Nema dostupnih podataka</p>
+                    )}
                   </div>
-                ) : (
-                  <p className="no-data">Nema dostupnih podataka</p>
-                )}
-              </div>
 
-              {/* Highest Prosek */}
-              <div className="statistics-card">
-                <h3>Dom s najvišim prosjekom</h3>
-                {statistics.highestProsek ? (
-                  <div className="statistics-single">
-                    <h4>{statistics.highestProsek.ime}</h4>
-                    <p>Prosječni prosek: {statistics.highestProsek.prosječni_prosek ? statistics.highestProsek.prosječni_prosek.toFixed(2) : 'N/A'}</p>
-                    <p>Adresa: {statistics.highestProsek.address}</p>
+                  {/* Highest Prosek */}
+                  <div className="statistics-single-item">
+                    <h4>Dom s najvišim prosjekom</h4>
+                    {statistics.highestProsek ? (
+                      <div className="statistics-single">
+                        <h5>{statistics.highestProsek.st_dom?.ime}</h5>
+                        <p>Prosječni prosek: {statistics.highestProsek.average_prosek ? statistics.highestProsek.average_prosek.toFixed(2) : 'N/A'}</p>
+                        <p>Broj stanara: {statistics.highestProsek.resident_count || 'N/A'}</p>
+                        <p>Adresa: {statistics.highestProsek.st_dom?.address}</p>
+                      </div>
+                    ) : (
+                      <p className="no-data">Nema dostupnih podataka</p>
+                    )}
                   </div>
-                ) : (
-                  <p className="no-data">Nema dostupnih podataka</p>
-                )}
+                </div>
               </div>
             </div>
           )}

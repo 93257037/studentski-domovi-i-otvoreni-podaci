@@ -416,6 +416,7 @@ func (s *OpenDataService) GetTopFullStDoms() ([]StDomOccupancyStats, error) {
 		return nil, err
 	}
 
+
 	// Fetch st_dom details and calculate total capacity for each
 	var stats []StDomOccupancyStats
 	for _, result := range results {

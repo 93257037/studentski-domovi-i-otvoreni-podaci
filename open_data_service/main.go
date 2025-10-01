@@ -33,7 +33,7 @@ func main() {
 	sobasCollection := db.GetCollection("sobas")
 	stDomsCollection := db.GetCollection("st_doms")
 	aplikacijeCollection := db.GetCollection("aplikacije")
-	prihvaceneAplikacijeCollection := db.GetCollection("prihvacena_aplikacije")
+	prihvaceneAplikacijeCollection := db.GetCollection("prihvacene_aplikacije")
 
 	// Initialize services
 	openDataService := services.NewOpenDataService(sobasCollection, stDomsCollection, aplikacijeCollection, prihvaceneAplikacijeCollection)
