@@ -44,6 +44,16 @@ func SetupRoutes(r *gin.Engine, handler *handlers.OpenDataHandler) {
 			statistics.GET("/st-dom-most-applications", handler.GetStDomWithMostApplications)      // Get dormitory with most applications
 			statistics.GET("/st-dom-highest-average-prosek", handler.GetStDomWithHighestAverageProsek) // Get dormitory with highest average prosek
 		}
+
+		// Inter-service communication endpoints
+		interService := v1.Group("/inter-service")
+		{
+			interService.GET("/health", handler.CheckStDomServiceHealth)                                    // Check st_dom_service health
+			interService.GET("/prihvacene-aplikacije", handler.GetPrihvaceneAplikacije)                    // Get all accepted applications
+			interService.GET("/prihvacene-aplikacije/user/:userId", handler.GetPrihvaceneAplikacijeForUser) // Get accepted applications for user
+			interService.GET("/prihvacene-aplikacije/room/:roomId", handler.GetPrihvaceneAplikacijeForRoom) // Get accepted applications for room
+			interService.GET("/prihvacene-aplikacije/academic-year/:academicYear", handler.GetPrihvaceneAplikacijeForAcademicYear) // Get accepted applications for academic year
+		}
 	}
 }
 

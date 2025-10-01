@@ -37,9 +37,12 @@ func main() {
 
 	// Initialize services
 	openDataService := services.NewOpenDataService(sobasCollection, stDomsCollection, aplikacijeCollection, prihvaceneAplikacijeCollection)
+	
+	// Initialize HTTP client service for inter-service communication
+	httpClientService := services.NewHTTPClientService(cfg.StDomServiceURL)
 
 	// Initialize handlers
-	openDataHandler := handlers.NewOpenDataHandler(openDataService)
+	openDataHandler := handlers.NewOpenDataHandler(openDataService, httpClientService)
 
 	// Initialize Gin router
 	router := gin.Default()

@@ -13,12 +13,16 @@ import (
 
 // OpenDataHandler handles HTTP requests for open data
 type OpenDataHandler struct {
-	service *services.OpenDataService
+	service        *services.OpenDataService
+	httpClient     *services.HTTPClientService
 }
 
 // NewOpenDataHandler creates a new OpenDataHandler
-func NewOpenDataHandler(service *services.OpenDataService) *OpenDataHandler {
-	return &OpenDataHandler{service: service}
+func NewOpenDataHandler(service *services.OpenDataService, httpClient *services.HTTPClientService) *OpenDataHandler {
+	return &OpenDataHandler{
+		service:    service,
+		httpClient: httpClient,
+	}
 }
 
 // FilterRoomsByLuksuz godoc
@@ -551,6 +555,186 @@ func (h *OpenDataHandler) GetStDomWithHighestAverageProsek(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"data": stats,
+	})
+}
+
+// GetPrihvaceneAplikacije godoc
+// @Summary Get all accepted applications from st_dom_service
+// @Description Retrieves all accepted applications by calling st_dom_service inter-service communication
+// @Tags Inter-Service Communication
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "List of accepted applications"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /api/v1/inter-service/prihvacene-aplikacije [get]
+func (h *OpenDataHandler) GetPrihvaceneAplikacije(c *gin.Context) {
+	// Extract Authorization header from the incoming request
+	authHeader := c.GetHeader("Authorization")
+	
+	response, err := h.httpClient.GetPrihvaceneAplikacije(authHeader)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to retrieve accepted applications from st_dom_service: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Data retrieved from st_dom_service via inter-service communication",
+		"data":    response.PrihvaceneAplikacije,
+		"count":   response.Count,
+		"source":  "st_dom_service",
+	})
+}
+
+// GetPrihvaceneAplikacijeForUser godoc
+// @Summary Get accepted applications for a specific user from st_dom_service
+// @Description Retrieves accepted applications for a specific user by calling st_dom_service
+// @Tags Inter-Service Communication
+// @Accept json
+// @Produce json
+// @Param userId path string true "User ID"
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "List of accepted applications for user"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /api/v1/inter-service/prihvacene-aplikacije/user/{userId} [get]
+func (h *OpenDataHandler) GetPrihvaceneAplikacijeForUser(c *gin.Context) {
+	userID := c.Param("userId")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "User ID is required",
+		})
+		return
+	}
+
+	// Extract Authorization header from the incoming request
+	authHeader := c.GetHeader("Authorization")
+
+	response, err := h.httpClient.GetPrihvaceneAplikacijeForUser(userID, authHeader)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to retrieve accepted applications for user from st_dom_service: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Data retrieved from st_dom_service via inter-service communication",
+		"data":    response.PrihvaceneAplikacije,
+		"count":   response.Count,
+		"user_id": userID,
+		"source":  "st_dom_service",
+	})
+}
+
+// GetPrihvaceneAplikacijeForRoom godoc
+// @Summary Get accepted applications for a specific room from st_dom_service
+// @Description Retrieves accepted applications for a specific room by calling st_dom_service
+// @Tags Inter-Service Communication
+// @Accept json
+// @Produce json
+// @Param roomId path string true "Room ID"
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "List of accepted applications for room"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /api/v1/inter-service/prihvacene-aplikacije/room/{roomId} [get]
+func (h *OpenDataHandler) GetPrihvaceneAplikacijeForRoom(c *gin.Context) {
+	roomID := c.Param("roomId")
+	if roomID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Room ID is required",
+		})
+		return
+	}
+
+	// Extract Authorization header from the incoming request
+	authHeader := c.GetHeader("Authorization")
+
+	response, err := h.httpClient.GetPrihvaceneAplikacijeForRoom(roomID, authHeader)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to retrieve accepted applications for room from st_dom_service: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Data retrieved from st_dom_service via inter-service communication",
+		"data":    response.PrihvaceneAplikacije,
+		"count":   response.Count,
+		"room_id": roomID,
+		"source":  "st_dom_service",
+	})
+}
+
+// GetPrihvaceneAplikacijeForAcademicYear godoc
+// @Summary Get accepted applications for a specific academic year from st_dom_service
+// @Description Retrieves accepted applications for a specific academic year by calling st_dom_service
+// @Tags Inter-Service Communication
+// @Accept json
+// @Produce json
+// @Param academicYear path string true "Academic Year (e.g., 2024/2025)"
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "List of accepted applications for academic year"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /api/v1/inter-service/prihvacene-aplikacije/academic-year/{academicYear} [get]
+func (h *OpenDataHandler) GetPrihvaceneAplikacijeForAcademicYear(c *gin.Context) {
+	academicYear := c.Param("academicYear")
+	if academicYear == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Academic year is required",
+		})
+		return
+	}
+
+	// Extract Authorization header from the incoming request
+	authHeader := c.GetHeader("Authorization")
+
+	response, err := h.httpClient.GetPrihvaceneAplikacijeForAcademicYear(academicYear, authHeader)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to retrieve accepted applications for academic year from st_dom_service: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":       "Data retrieved from st_dom_service via inter-service communication",
+		"data":          response.PrihvaceneAplikacije,
+		"count":         response.Count,
+		"academic_year": academicYear,
+		"source":        "st_dom_service",
+	})
+}
+
+// CheckStDomServiceHealth godoc
+// @Summary Check health of st_dom_service
+// @Description Checks if st_dom_service is available and responding
+// @Tags Inter-Service Communication
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{} "Service health status"
+// @Failure 500 {object} map[string]interface{} "Service unavailable"
+// @Router /api/v1/inter-service/health [get]
+func (h *OpenDataHandler) CheckStDomServiceHealth(c *gin.Context) {
+	err := h.httpClient.HealthCheck()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":  "unhealthy",
+			"service": "st_dom_service",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "healthy",
+		"service": "st_dom_service",
+		"message": "st_dom_service is available and responding",
 	})
 }
 

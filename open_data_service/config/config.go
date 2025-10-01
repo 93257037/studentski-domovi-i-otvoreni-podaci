@@ -9,10 +9,11 @@ import (
 
 // Config holds all configuration values
 type Config struct {
-	MongoDBURI   string
-	DatabaseName string
-	Port         string
-	GinMode      string
+	MongoDBURI     string
+	DatabaseName   string
+	Port           string
+	GinMode        string
+	StDomServiceURL string
 }
 
 // LoadConfig loads configuration from environment variables
@@ -23,10 +24,11 @@ func LoadConfig() *Config {
 	}
 
 	config := &Config{
-		MongoDBURI:   getEnv("MONGODB_URI", "mongodb://localhost:27018"),
-		DatabaseName: getEnv("DATABASE_NAME", "st_dom_db"),
-		Port:         getEnv("PORT", "8082"),
-		GinMode:      getEnv("GIN_MODE", "debug"),
+		MongoDBURI:     getEnv("MONGODB_URI", "mongodb://localhost:27018"),
+		DatabaseName:   getEnv("DATABASE_NAME", "st_dom_db"),
+		Port:           getEnv("PORT", "8082"),
+		GinMode:        getEnv("GIN_MODE", "debug"),
+		StDomServiceURL: getEnv("ST_DOM_SERVICE_URL", "http://localhost:8081"),
 	}
 
 	return config
