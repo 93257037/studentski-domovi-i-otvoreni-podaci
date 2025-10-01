@@ -35,6 +35,15 @@ func SetupRoutes(r *gin.Engine, handler *handlers.OpenDataHandler) {
 			stDoms.GET("/search-by-address", handler.SearchStDomsByAddress) // Search by address (regex)
 			stDoms.GET("/search-by-ime", handler.SearchStDomsByIme)         // Search by name (regex)
 		}
+
+		// Statistics endpoints
+		statistics := v1.Group("/statistics")
+		{
+			statistics.GET("/top-full-st-doms", handler.GetTopFullStDoms)                          // Get top 3 most full dormitories
+			statistics.GET("/top-empty-st-doms", handler.GetTopEmptyStDoms)                        // Get top 3 most empty dormitories
+			statistics.GET("/st-dom-most-applications", handler.GetStDomWithMostApplications)      // Get dormitory with most applications
+			statistics.GET("/st-dom-highest-average-prosek", handler.GetStDomWithHighestAverageProsek) // Get dormitory with highest average prosek
+		}
 	}
 }
 

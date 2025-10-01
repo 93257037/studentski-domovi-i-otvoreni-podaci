@@ -444,3 +444,113 @@ func (h *OpenDataHandler) Health(c *gin.Context) {
 	})
 }
 
+// GetTopFullStDoms godoc
+// @Summary Get top 3 most full student dormitories
+// @Description Returns the top 3 student dormitories with the most residents
+// @Tags Statistics
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{} "List of top 3 most full dormitories"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /api/v1/statistics/top-full-st-doms [get]
+func (h *OpenDataHandler) GetTopFullStDoms(c *gin.Context) {
+	stats, err := h.service.GetTopFullStDoms()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to get top full student dormitories",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":  stats,
+		"count": len(stats),
+	})
+}
+
+// GetTopEmptyStDoms godoc
+// @Summary Get top 3 most empty student dormitories
+// @Description Returns the top 3 student dormitories with the fewest residents
+// @Tags Statistics
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{} "List of top 3 most empty dormitories"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /api/v1/statistics/top-empty-st-doms [get]
+func (h *OpenDataHandler) GetTopEmptyStDoms(c *gin.Context) {
+	stats, err := h.service.GetTopEmptyStDoms()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to get top empty student dormitories",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":  stats,
+		"count": len(stats),
+	})
+}
+
+// GetStDomWithMostApplications godoc
+// @Summary Get student dormitory with most applications
+// @Description Returns the student dormitory with the highest number of active applications
+// @Tags Statistics
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{} "Student dormitory with most applications"
+// @Failure 404 {object} map[string]interface{} "No applications found"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /api/v1/statistics/st-dom-most-applications [get]
+func (h *OpenDataHandler) GetStDomWithMostApplications(c *gin.Context) {
+	stats, err := h.service.GetStDomWithMostApplications()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to get student dormitory with most applications",
+		})
+		return
+	}
+
+	if stats == nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "No applications found",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": stats,
+	})
+}
+
+// GetStDomWithHighestAverageProsek godoc
+// @Summary Get student dormitory with highest average prosek
+// @Description Returns the student dormitory with the highest average grade (prosek) of its residents
+// @Tags Statistics
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{} "Student dormitory with highest average prosek"
+// @Failure 404 {object} map[string]interface{} "No residents found"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /api/v1/statistics/st-dom-highest-average-prosek [get]
+func (h *OpenDataHandler) GetStDomWithHighestAverageProsek(c *gin.Context) {
+	stats, err := h.service.GetStDomWithHighestAverageProsek()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to get student dormitory with highest average prosek",
+		})
+		return
+	}
+
+	if stats == nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "No residents found",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": stats,
+	})
+}
+

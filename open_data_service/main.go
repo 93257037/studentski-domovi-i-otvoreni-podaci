@@ -32,9 +32,11 @@ func main() {
 	// Get collections
 	sobasCollection := db.GetCollection("sobas")
 	stDomsCollection := db.GetCollection("st_doms")
+	aplikacijeCollection := db.GetCollection("aplikacije")
+	prihvaceneAplikacijeCollection := db.GetCollection("prihvacena_aplikacije")
 
 	// Initialize services
-	openDataService := services.NewOpenDataService(sobasCollection, stDomsCollection)
+	openDataService := services.NewOpenDataService(sobasCollection, stDomsCollection, aplikacijeCollection, prihvaceneAplikacijeCollection)
 
 	// Initialize handlers
 	openDataHandler := handlers.NewOpenDataHandler(openDataService)
