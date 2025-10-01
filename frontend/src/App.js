@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 import Register from './components/Register';
 import Dashboard from './components/Dashboard';
+import StDomDetail from './components/StDomDetail';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
@@ -36,6 +37,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/st-dom/:id" 
+            element={
+              <ProtectedRoute>
+                <StDomDetail />
               </ProtectedRoute>
             } 
           />

@@ -732,3 +732,29 @@
     padding: 1rem;
   }
 }
+
+/* Clickable styles */
+.clickable {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.result-item.clickable:hover {
+  background-color: #f8f9fa;
+  border-color: #3498db;
+}
+
+.statistics-item.clickable:hover {
+  background-color: #f8f9fa;
+  border-color: #3498db;
+}
+
+.statistics-single.clickable:hover {
+  background-color: #f8f9fa;
+  border-color: #3498db;
+}

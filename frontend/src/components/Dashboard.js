@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import AddStDomModal from './AddStDomModal';
 import AddRoomModal from './AddRoomModal';
@@ -11,6 +12,7 @@ import './Dashboard.css';
 
 const Dashboard = () => {
   const { user, logout, deleteAccount } = useAuth();
+  const navigate = useNavigate();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showAddStDomModal, setShowAddStDomModal] = useState(false);
@@ -149,6 +151,12 @@ const Dashboard = () => {
     setAddressSearch('');
     setAddressResults([]);
     setAddressError('');
+  };
+
+  const handleStDomClick = (stDomId) => {
+    if (stDomId) {
+      navigate(`/st-dom/${stDomId}`);
+    }
   };
 
   // Statistics functions
@@ -299,7 +307,11 @@ const Dashboard = () => {
                 {statistics.topFull.length > 0 ? (
                   <div className="statistics-list">
                     {statistics.topFull.map((stat, index) => (
-                      <div key={stat.st_dom?._id || index} className="statistics-item">
+                      <div 
+                        key={stat.st_dom?.id || stat.st_dom?._id || index} 
+                        className="statistics-item clickable"
+                        onClick={() => handleStDomClick(stat.st_dom?.id || stat.st_dom?._id)}
+                      >
                         <div className="rank">#{index + 1}</div>
                         <div className="info">
                           <h4>{stat.st_dom?.ime}</h4>
@@ -321,7 +333,11 @@ const Dashboard = () => {
                 {statistics.topEmpty.length > 0 ? (
                   <div className="statistics-list">
                     {statistics.topEmpty.map((stat, index) => (
-                      <div key={stat.st_dom?._id || index} className="statistics-item">
+                      <div 
+                        key={stat.st_dom?.id || stat.st_dom?._id || index} 
+                        className="statistics-item clickable"
+                        onClick={() => handleStDomClick(stat.st_dom?.id || stat.st_dom?._id)}
+                      >
                         <div className="rank">#{index + 1}</div>
                         <div className="info">
                           <h4>{stat.st_dom?.ime}</h4>
@@ -345,7 +361,10 @@ const Dashboard = () => {
                   <div className="statistics-single-item">
                     <h4>Dom s najviše prijava</h4>
                     {statistics.mostApplications ? (
-                      <div className="statistics-single">
+                      <div 
+                        className="statistics-single clickable"
+                        onClick={() => handleStDomClick(statistics.mostApplications.st_dom?.id || statistics.mostApplications.st_dom?._id)}
+                      >
                         <h5>{statistics.mostApplications.st_dom?.ime}</h5>
                         <p>Broj prijava: {statistics.mostApplications.application_count || 'N/A'}</p>
                         <p>Adresa: {statistics.mostApplications.st_dom?.address}</p>
@@ -359,7 +378,10 @@ const Dashboard = () => {
                   <div className="statistics-single-item">
                     <h4>Dom s najvišim prosjekom</h4>
                     {statistics.highestProsek ? (
-                      <div className="statistics-single">
+                      <div 
+                        className="statistics-single clickable"
+                        onClick={() => handleStDomClick(statistics.highestProsek.st_dom?.id || statistics.highestProsek.st_dom?._id)}
+                      >
                         <h5>{statistics.highestProsek.st_dom?.ime}</h5>
                         <p>Prosječni prosek: {statistics.highestProsek.average_prosek ? statistics.highestProsek.average_prosek.toFixed(2) : 'N/A'}</p>
                         <p>Broj stanara: {statistics.highestProsek.resident_count || 'N/A'}</p>
@@ -409,7 +431,11 @@ const Dashboard = () => {
                 <h4>Rezultati pretraživanja ({imeResults.length})</h4>
                 <div className="results-list">
                   {imeResults.map((stDom) => (
-                    <div key={stDom._id} className="result-item">
+                    <div 
+                      key={stDom.id || stDom._id} 
+                      className="result-item clickable"
+                      onClick={() => handleStDomClick(stDom.id || stDom._id)}
+                    >
                       <h5>{stDom.ime}</h5>
                       <p><strong>Adresa:</strong> {stDom.address}</p>
                       {stDom.description && <p><strong>Opis:</strong> {stDom.description}</p>}
@@ -450,7 +476,11 @@ const Dashboard = () => {
                 <h4>Rezultati pretraživanja ({addressResults.length})</h4>
                 <div className="results-list">
                   {addressResults.map((stDom) => (
-                    <div key={stDom._id} className="result-item">
+                    <div 
+                      key={stDom.id || stDom._id} 
+                      className="result-item clickable"
+                      onClick={() => handleStDomClick(stDom.id || stDom._id)}
+                    >
                       <h5>{stDom.ime}</h5>
                       <p><strong>Adresa:</strong> {stDom.address}</p>
                       {stDom.description && <p><strong>Opis:</strong> {stDom.description}</p>}
