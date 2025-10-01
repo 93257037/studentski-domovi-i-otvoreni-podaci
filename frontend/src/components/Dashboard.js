@@ -20,6 +20,16 @@ const Dashboard = () => {
   const [imeError, setImeError] = useState('');
   const [addressError, setAddressError] = useState('');
 
+  // Statistics states
+  const [statistics, setStatistics] = useState({
+    topFull: [],
+    topEmpty: [],
+    mostApplications: null,
+    highestProsek: null
+  });
+  const [statisticsLoading, setStatisticsLoading] = useState(false);
+  const [statisticsError, setStatisticsError] = useState('');
+
   const handleDeleteAccount = async () => {
     setDeleteLoading(true);
     const result = await deleteAccount();
@@ -105,6 +115,32 @@ const Dashboard = () => {
     setAddressError('');
   };
 
+  // Statistics functions
+  const fetchStatistics = async () => {
+    setStatisticsLoading(true);
+    setStatisticsError('');
+    
+    try {
+      const [topFullResponse, topEmptyResponse, mostApplicationsResponse, highestProsekResponse] = await Promise.all([
+        openDataService.getTopFullStDoms(),
+        openDataService.getTopEmptyStDoms(),
+        openDataService.getStDomWithMostApplications(),
+        openDataService.getStDomWithHighestAverageProsek()
+      ]);
+
+      setStatistics({
+        topFull: topFullResponse.data || [],
+        topEmpty: topEmptyResponse.data || [],
+        mostApplications: mostApplicationsResponse.data || null,
+        highestProsek: highestProsekResponse.data || null
+      });
+    } catch (error) {
+      setStatisticsError('Greška pri učitavanju statistika: ' + error.message);
+    } finally {
+      setStatisticsLoading(false);
+    }
+  };
+
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
@@ -163,6 +199,98 @@ const Dashboard = () => {
               Obriši račun
             </button>
           </div>
+        </div>
+
+        {/* Statistics Section */}
+        <div className="statistics-section">
+          <div className="statistics-header">
+            <h2>Statistike studentskih domova</h2>
+            <button 
+              onClick={fetchStatistics} 
+              className="refresh-statistics-button"
+              disabled={statisticsLoading}
+            >
+              {statisticsLoading ? 'Učitavanje...' : 'Osvježi statistike'}
+            </button>
+          </div>
+          
+          {statisticsError && <div className="error-message">{statisticsError}</div>}
+          
+          {statisticsLoading ? (
+            <div className="loading-message">Učitavanje statistika...</div>
+          ) : (
+            <div className="statistics-grid">
+              {/* Most Populated */}
+              <div className="statistics-card">
+                <h3>Najnaseljeniji domovi</h3>
+                {statistics.topFull.length > 0 ? (
+                  <div className="statistics-list">
+                    {statistics.topFull.map((stDom, index) => (
+                      <div key={stDom._id || index} className="statistics-item">
+                        <div className="rank">#{index + 1}</div>
+                        <div className="info">
+                          <h4>{stDom.ime}</h4>
+                          <p>Broj stanara: {stDom.broj_stanara || 'N/A'}</p>
+                          <p>Adresa: {stDom.address}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="no-data">Nema dostupnih podataka</p>
+                )}
+              </div>
+
+              {/* Most Unpopulated */}
+              <div className="statistics-card">
+                <h3>Najmanje naseljeni domovi</h3>
+                {statistics.topEmpty.length > 0 ? (
+                  <div className="statistics-list">
+                    {statistics.topEmpty.map((stDom, index) => (
+                      <div key={stDom._id || index} className="statistics-item">
+                        <div className="rank">#{index + 1}</div>
+                        <div className="info">
+                          <h4>{stDom.ime}</h4>
+                          <p>Broj stanara: {stDom.broj_stanara || 'N/A'}</p>
+                          <p>Adresa: {stDom.address}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="no-data">Nema dostupnih podataka</p>
+                )}
+              </div>
+
+              {/* Most Applied For */}
+              <div className="statistics-card">
+                <h3>Dom s najviše prijava</h3>
+                {statistics.mostApplications ? (
+                  <div className="statistics-single">
+                    <h4>{statistics.mostApplications.ime}</h4>
+                    <p>Broj prijava: {statistics.mostApplications.broj_prijava || 'N/A'}</p>
+                    <p>Adresa: {statistics.mostApplications.address}</p>
+                  </div>
+                ) : (
+                  <p className="no-data">Nema dostupnih podataka</p>
+                )}
+              </div>
+
+              {/* Highest Prosek */}
+              <div className="statistics-card">
+                <h3>Dom s najvišim prosjekom</h3>
+                {statistics.highestProsek ? (
+                  <div className="statistics-single">
+                    <h4>{statistics.highestProsek.ime}</h4>
+                    <p>Prosječni prosek: {statistics.highestProsek.prosječni_prosek ? statistics.highestProsek.prosječni_prosek.toFixed(2) : 'N/A'}</p>
+                    <p>Adresa: {statistics.highestProsek.address}</p>
+                  </div>
+                ) : (
+                  <p className="no-data">Nema dostupnih podataka</p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Search Section */}
