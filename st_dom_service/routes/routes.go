@@ -105,7 +105,7 @@ func SetupRoutes(r *gin.Engine, stDomHandler *handlers.StDomHandler, sobaHandler
 				adminPrihvaceneAplikacije.GET("/:id", prihvacenaAplikacijaHandler.GetPrihvacenaAplikacija)                    // Get accepted application by ID
 				adminPrihvaceneAplikacije.GET("/user/:userId", prihvacenaAplikacijaHandler.GetPrihvaceneAplikacijeForUser)    // Get by user
 				adminPrihvaceneAplikacije.GET("/room/:sobaId", prihvacenaAplikacijaHandler.GetPrihvaceneAplikacijeForRoom)    // Get by room
-				adminPrihvaceneAplikacije.GET("/academic_year/:academicYear", prihvacenaAplikacijaHandler.GetPrihvaceneAplikacijeForAcademicYear) // Get by academic year
+				adminPrihvaceneAplikacije.GET("/academic_year", prihvacenaAplikacijaHandler.GetPrihvaceneAplikacijeForAcademicYear) // Get by academic year
 				adminPrihvaceneAplikacije.GET("/ranking/top", prihvacenaAplikacijaHandler.GetTopStudentsByProsek)             // Get top students overall
 				adminPrihvaceneAplikacije.GET("/ranking/top/academic_year/:academicYear", prihvacenaAplikacijaHandler.GetTopStudentsByProsekForAcademicYear) // Get top students by year
 				adminPrihvaceneAplikacije.GET("/ranking/top/room/:sobaId", prihvacenaAplikacijaHandler.GetTopStudentsByProsekForRoom) // Get top students by room

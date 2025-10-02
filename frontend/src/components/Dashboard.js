@@ -259,6 +259,12 @@ const Dashboard = () => {
                 >
                   Upravljaj sobama
                 </button>
+                <button 
+                  onClick={() => navigate('/academic-year-applications')}
+                  className="academic-year-button"
+                >
+                  Prihvaćene aplikacije po godini
+                </button>
               </>
             ) : (
               <button 

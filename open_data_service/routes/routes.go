@@ -52,7 +52,7 @@ func SetupRoutes(r *gin.Engine, handler *handlers.OpenDataHandler) {
 			interService.GET("/prihvacene-aplikacije", handler.GetPrihvaceneAplikacije)                    // Get all accepted applications
 			interService.GET("/prihvacene-aplikacije/user/:userId", handler.GetPrihvaceneAplikacijeForUser) // Get accepted applications for user
 			interService.GET("/prihvacene-aplikacije/room/:roomId", handler.GetPrihvaceneAplikacijeForRoom) // Get accepted applications for room
-			interService.GET("/prihvacene-aplikacije/academic-year/:academicYear", handler.GetPrihvaceneAplikacijeForAcademicYear) // Get accepted applications for academic year
+			interService.GET("/prihvacene-aplikacije/academic-year", handler.GetPrihvaceneAplikacijeForAcademicYear) // Get accepted applications for academic year
 		}
 	}
 }

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"st_dom_service/models"
 	"st_dom_service/services"
@@ -120,7 +121,11 @@ func (h *PrihvacenaAplikacijaHandler) GetPrihvaceneAplikacijeForRoom(c *gin.Cont
 
 // GetPrihvaceneAplikacijeForAcademicYear handles retrieving accepted applications for an academic year
 func (h *PrihvacenaAplikacijaHandler) GetPrihvaceneAplikacijeForAcademicYear(c *gin.Context) {
-	academicYear := c.Param("academicYear")
+	academicYear := c.Query("academic_year")
+	fmt.Printf("DEBUG: st_dom_service received academicYear query: '%s'\n", academicYear)
+	fmt.Printf("DEBUG: Full request path: %s\n", c.Request.URL.Path)
+	fmt.Printf("DEBUG: Full request URL: %s\n", c.Request.URL.String())
+	
 	if academicYear == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Academic year is required"})
 		return

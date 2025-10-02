@@ -14,7 +14,8 @@ class OpenDataService {
       ...options,
     };
 
-    const response = await fetch(`${this.baseURL}${endpoint}`, config);
+    const fullURL = `${this.baseURL}${endpoint}`;
+    const response = await fetch(fullURL, config);
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -88,6 +89,22 @@ class OpenDataService {
 
   async getStDomWithHighestAverageProsek() {
     return this.makeRequest('/statistics/st-dom-highest-average-prosek');
+  }
+
+  // Inter-service communication methods
+  async getPrihvaceneAplikacijeForAcademicYear(academicYear, token) {
+    const headers = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    
+    // Use query parameter to avoid URL encoding issues with forward slashes
+    const params = new URLSearchParams({ academic_year: academicYear });
+    const endpoint = `/inter-service/prihvacene-aplikacije/academic-year?${params}`;
+    
+    return this.makeRequest(endpoint, {
+      headers
+    });
   }
 }
 

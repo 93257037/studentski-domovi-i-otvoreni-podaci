@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -147,9 +148,16 @@ func (h *HTTPClientService) GetPrihvaceneAplikacijeForRoom(roomID string, authHe
 
 // GetPrihvaceneAplikacijeForAcademicYear calls the st_dom_service to get accepted applications for a specific academic year
 func (h *HTTPClientService) GetPrihvaceneAplikacijeForAcademicYear(academicYear string, authHeader string) (*PrihvacenaAplikacijaResponse, error) {
-	url := fmt.Sprintf("%s/api/v1/prihvacene_aplikacije/academic_year/%s", h.baseURL, academicYear)
+	// Use query parameter to avoid URL encoding issues
+	params := url.Values{}
+	params.Add("academic_year", academicYear)
+	requestURL := fmt.Sprintf("%s/api/v1/prihvacene_aplikacije/academic_year?%s", h.baseURL, params.Encode())
 	
-	req, err := http.NewRequest("GET", url, nil)
+	// Debug logging
+	fmt.Printf("DEBUG: Calling st_dom_service URL: %s\n", requestURL)
+	fmt.Printf("DEBUG: Auth header present: %t\n", authHeader != "")
+	
+	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -168,6 +176,7 @@ func (h *HTTPClientService) GetPrihvaceneAplikacijeForAcademicYear(academicYear 
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
+		fmt.Printf("DEBUG: st_dom_service returned status %d: %s\n", resp.StatusCode, string(body))
 		return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 

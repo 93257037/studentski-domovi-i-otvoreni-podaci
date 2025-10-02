@@ -676,14 +676,14 @@ func (h *OpenDataHandler) GetPrihvaceneAplikacijeForRoom(c *gin.Context) {
 // @Tags Inter-Service Communication
 // @Accept json
 // @Produce json
-// @Param academicYear path string true "Academic Year (e.g., 2024/2025)"
+// @Param academic_year query string true "Academic Year (e.g., 2024/2025)"
 // @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "List of accepted applications for academic year"
 // @Failure 400 {object} map[string]interface{} "Bad request"
 // @Failure 500 {object} map[string]interface{} "Internal server error"
-// @Router /api/v1/inter-service/prihvacene-aplikacije/academic-year/{academicYear} [get]
+// @Router /api/v1/inter-service/prihvacene-aplikacije/academic-year [get]
 func (h *OpenDataHandler) GetPrihvaceneAplikacijeForAcademicYear(c *gin.Context) {
-	academicYear := c.Param("academicYear")
+	academicYear := c.Query("academic_year")
 	if academicYear == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Academic year is required",

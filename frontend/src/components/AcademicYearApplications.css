@@ -1,0 +1,409 @@
+.academic-year-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.academic-year-header {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.header-content h1 {
+  color: #2c3e50;
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.back-button, .logout-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.back-button {
+  background-color: #3498db;
+  color: white;
+}
+
+.back-button:hover {
+  background-color: #2980b9;
+  transform: translateY(-2px);
+}
+
+.logout-button {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.logout-button:hover {
+  background-color: #c0392b;
+  transform: translateY(-2px);
+}
+
+.academic-year-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.search-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 25px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.search-card h2 {
+  color: #2c3e50;
+  margin: 0 0 20px 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.search-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.search-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.search-input-group label {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 1rem;
+}
+
+.search-input {
+  padding: 12px 15px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+  background-color: white;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.search-input:disabled {
+  background-color: #f8f9fa;
+  cursor: not-allowed;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.search-button, .clear-button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.search-button {
+  background-color: #27ae60;
+  color: white;
+  flex: 1;
+  min-width: 120px;
+}
+
+.search-button:hover:not(:disabled) {
+  background-color: #229954;
+  transform: translateY(-2px);
+}
+
+.search-button:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.clear-button {
+  background-color: #95a5a6;
+  color: white;
+  min-width: 80px;
+}
+
+.clear-button:hover:not(:disabled) {
+  background-color: #7f8c8d;
+  transform: translateY(-2px);
+}
+
+.clear-button:disabled {
+  cursor: not-allowed;
+  transform: none;
+}
+
+.format-hint {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: #e8f4f8;
+  border-left: 4px solid #3498db;
+  border-radius: 4px;
+}
+
+.format-hint p {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 0.9rem;
+}
+
+.error-message {
+  background-color: #fee;
+  color: #c0392b;
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 4px solid #e74c3c;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.results-section {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.results-header h2 {
+  color: #2c3e50;
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.results-info {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.academic-year-label, .count-label {
+  color: #2c3e50;
+  font-size: 1rem;
+}
+
+.applications-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 20px;
+}
+
+.application-card {
+  background: white;
+  border: 1px solid #e0e6ed;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.application-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.application-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #f8f9fa;
+}
+
+.application-header h3 {
+  color: #2c3e50;
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.application-id {
+  color: #7f8c8d;
+  font-size: 0.9rem;
+  font-family: monospace;
+  background-color: #f8f9fa;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.application-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+}
+
+.detail-row .label {
+  font-weight: 600;
+  color: #34495e;
+  flex: 1;
+}
+
+.detail-row .value {
+  color: #2c3e50;
+  flex: 1;
+  text-align: right;
+  font-family: monospace;
+}
+
+.detail-row .value.prosek {
+  font-weight: 600;
+  color: #27ae60;
+  font-size: 1.1rem;
+}
+
+.no-results {
+  text-align: center;
+  padding: 40px 20px;
+  color: #7f8c8d;
+}
+
+.no-results h3 {
+  color: #95a5a6;
+  margin-bottom: 10px;
+  font-size: 1.3rem;
+}
+
+.no-results p {
+  color: #bdc3c7;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.access-denied {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  max-width: 500px;
+  margin: 50px auto;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.access-denied h2 {
+  color: #e74c3c;
+  margin-bottom: 15px;
+  font-size: 1.5rem;
+}
+
+.access-denied p {
+  color: #7f8c8d;
+  margin-bottom: 25px;
+  font-size: 1rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .academic-year-container {
+    padding: 10px;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .header-content h1 {
+    font-size: 1.5rem;
+    text-align: center;
+  }
+  
+  .header-actions {
+    justify-content: center;
+  }
+  
+  .applications-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .results-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .results-info {
+    justify-content: center;
+  }
+  
+  .button-group {
+    flex-direction: column;
+  }
+  
+  .search-button, .clear-button {
+    flex: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .search-card, .results-section {
+    padding: 15px;
+  }
+  
+  .application-card {
+    padding: 15px;
+  }
+  
+  .detail-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 5px;
+  }
+  
+  .detail-row .value {
+    text-align: left;
+  }
+}
