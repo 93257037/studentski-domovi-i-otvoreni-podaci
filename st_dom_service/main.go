@@ -11,14 +11,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+//pokretanje st_dom servisa
+// ucitava konfiguraciju, povezuje se sa bazom, kreira servise i handlere, postavlja rute
 func main() {
-	// Load configuration
 	cfg := config.LoadConfig()
 
-	// Set Gin mode
 	gin.SetMode(cfg.GinMode)
 
-	// Connect to MongoDB
 	db, err := database.NewMongoDB(cfg.MongoDBURI, cfg.DatabaseName)
 	if err != nil {
 		log.Fatal("Failed to connect to MongoDB:", err)
@@ -29,21 +28,18 @@ func main() {
 		}
 	}()
 
-	// Get collections
 	stDomsCollection := db.GetCollection("st_doms")
 	sobasCollection := db.GetCollection("sobas")
 	aplikacijeCollection := db.GetCollection("aplikacije")
 	prihvaceneAplikacijeCollection := db.GetCollection("prihvacene_aplikacije")
 	paymentsCollection := db.GetCollection("payments")
 
-	// Initialize services
 	stDomService := services.NewStDomService(stDomsCollection)
 	sobaService := services.NewSobaService(sobasCollection, prihvaceneAplikacijeCollection)
 	aplikacijaService := services.NewAplikacijaService(aplikacijeCollection)
 	paymentService := services.NewPaymentService(paymentsCollection)
 	prihvacenaAplikacijaService := services.NewPrihvacenaAplikacijaService(prihvaceneAplikacijeCollection, aplikacijaService, paymentService)
 
-	// Initialize handlers
 	stDomHandler := handlers.NewStDomHandler(stDomService, sobaService)
 	sobaHandler := handlers.NewSobaHandler(sobaService, stDomService)
 	aplikacijaHandler := handlers.NewAplikacijaHandler(aplikacijaService, sobaService)
@@ -51,13 +47,10 @@ func main() {
 	paymentHandler := handlers.NewPaymentHandler(paymentService, aplikacijaService, sobaService)
 	healthHandler := handlers.NewHealthHandler()
 
-	// Initialize Gin router
 	router := gin.Default()
 
-	// Setup routes
 	routes.SetupRoutes(router, stDomHandler, sobaHandler, aplikacijaHandler, prihvacenaAplikacijaHandler, paymentHandler, healthHandler, cfg.JWTSecret)
 
-	// Start server
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := router.Run(":" + cfg.Port); err != nil {
 		log.Fatal("Failed to start server:", err)

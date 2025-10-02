@@ -8,7 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// JWTClaims represents the JWT claims
+// JWTClaims - podaci koji se cuvaju u JWT tokenu
 type JWTClaims struct {
 	UserID   primitive.ObjectID `json:"user_id"`
 	Username string             `json:"username"`
@@ -17,7 +17,8 @@ type JWTClaims struct {
 	jwt.RegisteredClaims
 }
 
-// GenerateJWT generates a JWT token for a user
+// generiše JWT token za korisnika sa prosledjenim podacima
+// token vazi 24 sata i potpisan je sa tajnim kljucem
 func GenerateJWT(userID primitive.ObjectID, username, email, role, secret string) (string, error) {
 	claims := JWTClaims{
 		UserID:   userID,
@@ -35,7 +36,8 @@ func GenerateJWT(userID primitive.ObjectID, username, email, role, secret string
 	return token.SignedString([]byte(secret))
 }
 
-// ValidateJWT validates a JWT token and returns the claims
+// validira JWT token i vraca podatke iz njega
+// proverava potpis i da li je token jos uvek valjan
 func ValidateJWT(tokenString, secret string) (*JWTClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {

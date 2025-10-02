@@ -1,10 +1,14 @@
-const API_BASE_URL = process.env.REACT_APP_ST_DOM_SERVICE_URL || 'http://localhost:8081/api/v1';
+// API Gateway svi servisi su dostupni kroz jedan gateway
+const API_BASE_URL = process.env.REACT_APP_API_GATEWAY_URL || 'http://localhost/api/v1';
 
+//komunikacija sa st_dom_service
+//zahtevi vezani za domove, sobe, aplikacije i placanja
 class StDomService {
   constructor() {
     this.baseURL = API_BASE_URL;
   }
 
+  //HTTP zahtev sa automatskim dodavanjem JWT tokena
   async makeRequest(endpoint, options = {}) {
     const token = localStorage.getItem('token');
     
@@ -27,22 +31,22 @@ class StDomService {
     return response.json();
   }
 
-  // Get all student dormitories (public)
+  // dobija sve studentske domove (javno)
   async getAllStDoms() {
     return this.makeRequest('/st_doms/');
   }
 
-  // Get specific student dormitory (public)
+  // dobija odredjeni studentski dom po ID-u (javno)
   async getStDom(id) {
     return this.makeRequest(`/st_doms/${id}`);
   }
 
-  // Get rooms for a specific dormitory (public)
+  // dobija sobe za odredjeni dom (javno)
   async getStDomRooms(id) {
     return this.makeRequest(`/st_doms/${id}/rooms`);
   }
 
-  // Create new student dormitory (admin only)
+  // kreira novi studentski dom (samo admin)
   async createStDom(stDomData) {
     return this.makeRequest('/st_doms/', {
       method: 'POST',
@@ -50,7 +54,7 @@ class StDomService {
     });
   }
 
-  // Update student dormitory (admin only)
+  // azurira studentski dom (samo admin)
   async updateStDom(id, stDomData) {
     return this.makeRequest(`/st_doms/${id}`, {
       method: 'PUT',
@@ -58,24 +62,24 @@ class StDomService {
     });
   }
 
-  // Delete student dormitory (admin only)
+  // brise studentski dom (samo admin)
   async deleteStDom(id) {
     return this.makeRequest(`/st_doms/${id}`, {
       method: 'DELETE',
     });
   }
 
-  // Get all rooms (public)
+  // dobija sve sobe (javno)
   async getAllRooms() {
     return this.makeRequest('/sobas/');
   }
 
-  // Get specific room (public)
+  // dobija odredjenu sobu po ID-u (javno)
   async getRoom(id) {
     return this.makeRequest(`/sobas/${id}`);
   }
 
-  // Create new room (admin only)
+  // kreira novu sobu (samo admin)
   async createRoom(roomData) {
     return this.makeRequest('/sobas/', {
       method: 'POST',
@@ -83,7 +87,7 @@ class StDomService {
     });
   }
 
-  // Update room (admin only)
+  // azurira sobu (samo admin)
   async updateRoom(id, roomData) {
     return this.makeRequest(`/sobas/${id}`, {
       method: 'PUT',
@@ -91,16 +95,16 @@ class StDomService {
     });
   }
 
-  // Delete room (admin only)
+  // brise sobu (samo admin)
   async deleteRoom(id) {
     return this.makeRequest(`/sobas/${id}`, {
       method: 'DELETE',
     });
   }
 
-  // Application endpoints
+  // endpoint-i za aplikacije
 
-  // Create new application (user only)
+  // kreira novu aplikaciju za sobu (samo korisnik)
   async createAplikacija(aplikacijaData) {
     return this.makeRequest('/aplikacije/', {
       method: 'POST',
@@ -108,17 +112,17 @@ class StDomService {
     });
   }
 
-  // Get all applications for current user
+  // dobija sve aplikacije trenutnog korisnika
   async getMyAplikacije() {
     return this.makeRequest('/aplikacije/my');
   }
 
-  // Get specific application
+  // dobija odredjenu aplikaciju po ID-u
   async getAplikacija(id) {
     return this.makeRequest(`/aplikacije/${id}`);
   }
 
-  // Update application (user can update their own)
+  // azurira aplikaciju (korisnik moze azurirati svoju)
   async updateAplikacija(id, aplikacijaData) {
     return this.makeRequest(`/aplikacije/${id}`, {
       method: 'PUT',
@@ -126,21 +130,21 @@ class StDomService {
     });
   }
 
-  // Delete application (user can delete their own)
+  // brise aplikaciju (korisnik moze brisati svoju)
   async deleteAplikacija(id) {
     return this.makeRequest(`/aplikacije/${id}`, {
       method: 'DELETE',
     });
   }
 
-  // Admin application management
+  // upravljanje aplikacijama za administratore
 
-  // Get all applications (admin only)
+  // dobija sve aplikacije (samo admin)
   async getAllAplikacije() {
     return this.makeRequest('/aplikacije/');
   }
 
-  // Approve application (admin only)
+  // odobrava aplikaciju (samo admin)
   async approveAplikacija(aplikacijaId, academicYear) {
     return this.makeRequest('/prihvacene_aplikacije/approve', {
       method: 'POST',
@@ -151,21 +155,20 @@ class StDomService {
     });
   }
 
-  // Reject/Delete application (admin only)
+  // odbacuje/brise aplikaciju (samo admin)
   async rejectAplikacija(id) {
     return this.makeRequest(`/aplikacije/${id}`, {
       method: 'DELETE',
     });
   }
 
-  // Room/Accepted Applications Management
-
-  // Get all accepted applications (admin only)
+  // upravljanje sobama i prihvacenim aplikacijama
+  // dobija sve prihvacene aplikacije (samo admin)
   async getAllPrihvaceneAplikacije() {
     return this.makeRequest('/prihvacene_aplikacije/');
   }
 
-  // Evict student from room (admin only)
+  // izbacuje studenta iz sobe (samo admin)
   async evictStudent(userId, reason) {
     return this.makeRequest('/prihvacene_aplikacije/evict', {
       method: 'POST',
@@ -176,13 +179,13 @@ class StDomService {
     });
   }
 
-  // Get all payments with optional status filter (admin only)
+  // dobija sva placanja sa opcionalnim filterom statusa (samo admin)
   async getAllPayments(status = null) {
     const url = status ? `/payments/?status=${status}` : '/payments/';
     return this.makeRequest(url);
   }
 
-  // Create payment (admin only)
+  // kreira novo placanje (samo admin)
   async createPayment(paymentData) {
     return this.makeRequest('/payments/', {
       method: 'POST',
@@ -190,7 +193,7 @@ class StDomService {
     });
   }
 
-  // Search payments by student index (admin only)
+  // pretrazuje placanja po indeksu studenta (samo admin)
   async searchPaymentsByIndex(indexPattern, status = null) {
     const url = status 
       ? `/payments/search?index=${indexPattern}&status=${status}`
@@ -198,17 +201,17 @@ class StDomService {
     return this.makeRequest(url);
   }
 
-  // Get payments by room (admin only)
+  // dobija placanja po sobi (samo admin)
   async getPaymentsByRoom(sobaId) {
     return this.makeRequest(`/payments/room/${sobaId}`);
   }
 
-  // Get payments by user (admin only)
+  // dobija placanja po korisniku (samo admin)
   async getPaymentsByUser(userId) {
     return this.makeRequest(`/payments/user/${userId}`);
   }
 
-  // Mark payment as paid (admin only)
+  // oznacava placanje kao placeno (samo admin)
   async markPaymentAsPaid(paymentId, paidAt = null) {
     return this.makeRequest(`/payments/${paymentId}/mark-paid`, {
       method: 'PATCH',
@@ -216,28 +219,28 @@ class StDomService {
     });
   }
 
-  // Mark payment as unpaid (admin only)
+  // oznacava placanje kao neplaceno (samo admin)
   async markPaymentAsUnpaid(paymentId) {
     return this.makeRequest(`/payments/${paymentId}/mark-unpaid`, {
       method: 'PATCH',
     });
   }
 
-  // User-specific endpoints
+  // endpoint-i specificni za korisnika
 
-  // Get my accepted applications (current user)
+  // dobija moje prihvacene aplikacije (trenutni korisnik)
   async getMyPrihvaceneAplikacije() {
     return this.makeRequest('/prihvacene_aplikacije/my');
   }
 
-  // Checkout from room (current user)
+  // odjavljuje se iz sobe (trenutni korisnik)
   async checkoutFromRoom() {
     return this.makeRequest('/prihvacene_aplikacije/checkout', {
       method: 'POST',
     });
   }
 
-  // Get payments by aplikacija ID
+  // dobija placanja po ID-u aplikacije
   async getPaymentsByAplikacija(aplikacijaId) {
     return this.makeRequest(`/payments/aplikacija/${aplikacijaId}`);
   }

@@ -11,14 +11,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// glavna funkcija - pokretanje SSO servisa
+// ucitava konfiguraciju, povezuje se sa bazom, postavlja rute i pokretanje servera
 func main() {
-	// Load configuration
 	cfg := config.LoadConfig()
 
-	// Set Gin mode
 	gin.SetMode(cfg.GinMode)
 
-	// Connect to MongoDB
 	db, err := database.NewMongoDB(cfg.MongoDBURI, cfg.DatabaseName)
 	if err != nil {
 		log.Fatal("Failed to connect to MongoDB:", err)
@@ -29,22 +28,16 @@ func main() {
 		}
 	}()
 
-	// Get users collection
 	usersCollection := db.GetCollection("users")
 
-	// Initialize services
 	userService := services.NewUserService(usersCollection, cfg.JWTSecret, cfg.StDomServiceURL)
 
-	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(userService)
 
-	// Initialize Gin router
 	router := gin.Default()
 
-	// Setup routes
 	routes.SetupRoutes(router, authHandler, cfg.JWTSecret)
 
-	// Start server
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := router.Run(":" + cfg.Port); err != nil {
 		log.Fatal("Failed to start server:", err)

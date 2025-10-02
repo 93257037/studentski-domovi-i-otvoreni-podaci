@@ -9,27 +9,25 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// MongoDB holds the database connection
+// MongoDB - drzi konekciju sa bazom podataka
 type MongoDB struct {
 	Client   *mongo.Client
 	Database *mongo.Database
 }
 
-// NewMongoDB creates a new MongoDB connection
+// kreira novu MongoDB konekciju sa prosledjenim URI-jem i imenom baze
+// testira konekciju i vraca MongoDB instancu
 func NewMongoDB(uri, databaseName string) (*MongoDB, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Set client options
 	clientOptions := options.Client().ApplyURI(uri)
 
-	// Connect to MongoDB
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	// Test the connection
 	err = client.Ping(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -45,7 +43,7 @@ func NewMongoDB(uri, databaseName string) (*MongoDB, error) {
 	}, nil
 }
 
-// Close closes the MongoDB connection
+// zatvara MongoDB konekciju
 func (m *MongoDB) Close() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -53,7 +51,7 @@ func (m *MongoDB) Close() error {
 	return m.Client.Disconnect(ctx)
 }
 
-// GetCollection returns a collection from the database
+// vraca kolekciju iz baze podataka po imenu
 func (m *MongoDB) GetCollection(collectionName string) *mongo.Collection {
 	return m.Database.Collection(collectionName)
 }

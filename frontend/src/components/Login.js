@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import './Auth.css';
 
+// komponenta za prijavu korisnika - forma sa email i lozinkom
 const Login = () => {
   const [formData, setFormData] = useState({
     email: '',
@@ -14,6 +15,7 @@ const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  // rukuje promenama u input poljima
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -21,6 +23,7 @@ const Login = () => {
     });
   };
 
+  // rukuje slanjem forme za prijavu
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');

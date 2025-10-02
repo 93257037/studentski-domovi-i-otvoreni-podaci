@@ -9,13 +9,13 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// StDomHandler handles student dormitory-related requests
+// StDomHandler - rukuje zahtevima vezanim za studentske domove
 type StDomHandler struct {
 	stDomService *services.StDomService
 	sobaService  *services.SobaService
 }
 
-// NewStDomHandler creates a new StDomHandler
+// kreira novi StDomHandler sa potrebnim servisima
 func NewStDomHandler(stDomService *services.StDomService, sobaService *services.SobaService) *StDomHandler {
 	return &StDomHandler{
 		stDomService: stDomService,
@@ -23,7 +23,8 @@ func NewStDomHandler(stDomService *services.StDomService, sobaService *services.
 	}
 }
 
-// CreateStDom handles creating a new student dormitory
+// kreira novi studentski dom - prima podatke, validira ih i cuva u bazu
+// proverava da li vec postoji dom sa istom adresom
 func (h *StDomHandler) CreateStDom(c *gin.Context) {
 	var req models.CreateStDomRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -43,7 +44,8 @@ func (h *StDomHandler) CreateStDom(c *gin.Context) {
 	})
 }
 
-// GetStDom handles retrieving a student dormitory by ID
+// dobija studentski dom po ID-u iz baze podataka
+// vraca gresku ako ID nije valjan ili dom ne postoji
 func (h *StDomHandler) GetStDom(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idParam)
@@ -63,7 +65,7 @@ func (h *StDomHandler) GetStDom(c *gin.Context) {
 	})
 }
 
-// GetAllStDoms handles retrieving all student dormitories
+// dobija sve studentske domove iz baze podataka
 func (h *StDomHandler) GetAllStDoms(c *gin.Context) {
 	stDoms, err := h.stDomService.GetAllStDoms()
 	if err != nil {
@@ -76,7 +78,8 @@ func (h *StDomHandler) GetAllStDoms(c *gin.Context) {
 	})
 }
 
-// UpdateStDom handles updating a student dormitory
+// azurira podatke o studentskom domu
+// prima ID i nove podatke, validira ih i cuva promene
 func (h *StDomHandler) UpdateStDom(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idParam)
@@ -103,7 +106,8 @@ func (h *StDomHandler) UpdateStDom(c *gin.Context) {
 	})
 }
 
-// DeleteStDom handles deleting a student dormitory
+// brise studentski dom i sve povezane sobe
+// prvo brise sve sobe koje pripadaju domu, zatim brise sam dom
 func (h *StDomHandler) DeleteStDom(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idParam)
@@ -112,14 +116,12 @@ func (h *StDomHandler) DeleteStDom(c *gin.Context) {
 		return
 	}
 
-	// First delete all rooms associated with this dormitory
 	err = h.sobaService.DeleteSobasByStDomID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete associated rooms"})
 		return
 	}
 
-	// Then delete the dormitory
 	err = h.stDomService.DeleteStDom(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -131,8 +133,8 @@ func (h *StDomHandler) DeleteStDom(c *gin.Context) {
 	})
 }
 
-// GetStDomRooms handles retrieving all rooms for a specific dormitory
-// Returns only available rooms (not fully occupied)
+// dobija sve dostupne sobe za odredjeni studentski dom
+// vraca samo sobe koje nisu potpuno popunjene
 func (h *StDomHandler) GetStDomRooms(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idParam)
@@ -141,14 +143,12 @@ func (h *StDomHandler) GetStDomRooms(c *gin.Context) {
 		return
 	}
 
-	// First check if dormitory exists
 	_, err = h.stDomService.GetStDomByID(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Student dormitory not found"})
 		return
 	}
 
-	// Get available rooms (only rooms with space left)
 	sobas, err := h.sobaService.GetAvailableSobasByStDomID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

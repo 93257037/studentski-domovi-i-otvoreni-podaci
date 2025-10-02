@@ -9,14 +9,14 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// PaymentHandler handles payment-related requests
+// PaymentHandler - rukuje zahtevima vezanim za placanja
 type PaymentHandler struct {
 	paymentService    *services.PaymentService
 	aplikacijaService *services.AplikacijaService
 	sobaService       *services.SobaService
 }
 
-// NewPaymentHandler creates a new PaymentHandler
+// kreira novi PaymentHandler sa potrebnim servisima
 func NewPaymentHandler(paymentService *services.PaymentService, aplikacijaService *services.AplikacijaService, sobaService *services.SobaService) *PaymentHandler {
 	return &PaymentHandler{
 		paymentService:    paymentService,
@@ -25,7 +25,8 @@ func NewPaymentHandler(paymentService *services.PaymentService, aplikacijaServic
 	}
 }
 
-// CreatePayment handles creating a new payment (admin only)
+// kreira novo placanje - samo administratori mogu kreirati placanja
+// proverava da li aplikacija postoji i da li je aktivna
 func (h *PaymentHandler) CreatePayment(c *gin.Context) {
 	var req models.CreatePaymentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -33,14 +34,12 @@ func (h *PaymentHandler) CreatePayment(c *gin.Context) {
 		return
 	}
 
-	// Verify that the application exists
 	aplikacija, err := h.aplikacijaService.GetAplikacijaByID(req.AplikacijaID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Application not found"})
 		return
 	}
 
-	// Check if application is active
 	if !aplikacija.IsActive {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Application is not active"})
 		return
@@ -58,7 +57,8 @@ func (h *PaymentHandler) CreatePayment(c *gin.Context) {
 	})
 }
 
-// GetPayment handles retrieving a payment by ID
+// dobija placanje po ID-u - korisnici mogu videti samo svoja placanja
+// administratori mogu videti sva placanja
 func (h *PaymentHandler) GetPayment(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idParam)
@@ -67,7 +67,6 @@ func (h *PaymentHandler) GetPayment(c *gin.Context) {
 		return
 	}
 
-	// Extract user ID and role from JWT token
 	userIDClaim, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
@@ -92,9 +91,7 @@ func (h *PaymentHandler) GetPayment(c *gin.Context) {
 		return
 	}
 
-	// Users can only see their own payments, admins can see all
 	if userRole == "user" {
-		// Get the associated application to check ownership
 		aplikacija, err := h.aplikacijaService.GetAplikacijaByID(payment.AplikacijaID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify payment ownership"})
@@ -111,9 +108,8 @@ func (h *PaymentHandler) GetPayment(c *gin.Context) {
 	})
 }
 
-// GetMyPayments handles retrieving all payments for the current user
+// dobija sva placanja trenutno ulogovanog korisnika
 func (h *PaymentHandler) GetMyPayments(c *gin.Context) {
-	// Extract user ID from JWT token
 	userIDClaim, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
@@ -137,9 +133,9 @@ func (h *PaymentHandler) GetMyPayments(c *gin.Context) {
 	})
 }
 
-// GetAllPayments handles retrieving all payments (admin only)
+// dobija sva placanja - samo za administratore
+// moze da filtrira po statusu placanja
 func (h *PaymentHandler) GetAllPayments(c *gin.Context) {
-	// Check for status filter
 	statusParam := c.Query("status")
 	
 	var payments []models.Payment
@@ -166,16 +162,15 @@ func (h *PaymentHandler) GetAllPayments(c *gin.Context) {
 	})
 }
 
-// SearchPaymentsByIndex handles searching payments by student index pattern (admin only)
+// pretrazuje placanja po indeksu studenta - samo za administratore
+// prima pattern indeksa i opciono status placanja
 func (h *PaymentHandler) SearchPaymentsByIndex(c *gin.Context) {
-	// Get index pattern from query parameter
 	indexPattern := c.Query("index")
 	if indexPattern == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Index pattern is required"})
 		return
 	}
 
-	// Get optional status filter
 	var statusPtr *models.PaymentStatus
 	statusParam := c.Query("status")
 	if statusParam != "" {
@@ -187,7 +182,6 @@ func (h *PaymentHandler) SearchPaymentsByIndex(c *gin.Context) {
 		statusPtr = &status
 	}
 
-	// Search payments
 	payments, err := h.paymentService.SearchPaymentsByIndex(indexPattern, statusPtr)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -202,7 +196,7 @@ func (h *PaymentHandler) SearchPaymentsByIndex(c *gin.Context) {
 	})
 }
 
-// GetPaymentsByRoom handles retrieving all payments for a specific room (admin only)
+// dobija sva placanja za odredjenu sobu - samo za administratore
 func (h *PaymentHandler) GetPaymentsByRoom(c *gin.Context) {
 	idParam := c.Param("sobaId")
 	sobaID, err := primitive.ObjectIDFromHex(idParam)
@@ -211,7 +205,6 @@ func (h *PaymentHandler) GetPaymentsByRoom(c *gin.Context) {
 		return
 	}
 
-	// Check if the room exists
 	_, err = h.sobaService.GetSobaByID(sobaID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Room not found"})
@@ -229,7 +222,7 @@ func (h *PaymentHandler) GetPaymentsByRoom(c *gin.Context) {
 	})
 }
 
-// GetPaymentsByUser handles retrieving all payments for a specific user (admin only)
+// dobija sva placanja za odredjenog korisnika - samo za administratore
 func (h *PaymentHandler) GetPaymentsByUser(c *gin.Context) {
 	idParam := c.Param("userId")
 	userID, err := primitive.ObjectIDFromHex(idParam)
@@ -249,7 +242,7 @@ func (h *PaymentHandler) GetPaymentsByUser(c *gin.Context) {
 	})
 }
 
-// GetPaymentsByAplikacija handles retrieving all payments for a specific application (admin only)
+// dobija sva placanja za odredjenu aplikaciju - samo za administratore
 func (h *PaymentHandler) GetPaymentsByAplikacija(c *gin.Context) {
 	idParam := c.Param("aplikacijaId")
 	aplikacijaID, err := primitive.ObjectIDFromHex(idParam)
@@ -258,7 +251,6 @@ func (h *PaymentHandler) GetPaymentsByAplikacija(c *gin.Context) {
 		return
 	}
 
-	// Check if the application exists
 	_, err = h.aplikacijaService.GetAplikacijaByID(aplikacijaID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Application not found"})
@@ -276,7 +268,7 @@ func (h *PaymentHandler) GetPaymentsByAplikacija(c *gin.Context) {
 	})
 }
 
-// UpdatePayment handles updating a payment (admin only)
+// azurira placanje - samo administratori mogu azurirati placanja
 func (h *PaymentHandler) UpdatePayment(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idParam)
@@ -303,7 +295,8 @@ func (h *PaymentHandler) UpdatePayment(c *gin.Context) {
 	})
 }
 
-// MarkPaymentAsPaid handles marking a payment as paid (admin only)
+// oznacava placanje kao placeno - samo administratori
+// moze da primi datum placanja ili koristi trenutno vreme
 func (h *PaymentHandler) MarkPaymentAsPaid(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idParam)
@@ -313,7 +306,6 @@ func (h *PaymentHandler) MarkPaymentAsPaid(c *gin.Context) {
 	}
 
 	var req models.MarkPaymentPaidRequest
-	// Don't return error if body is empty, just use default (current time)
 	_ = c.ShouldBindJSON(&req)
 
 	payment, err := h.paymentService.MarkPaymentAsPaid(id, req.PaidAt)
@@ -328,7 +320,7 @@ func (h *PaymentHandler) MarkPaymentAsPaid(c *gin.Context) {
 	})
 }
 
-// MarkPaymentAsUnpaid handles marking a payment as unpaid/pending (admin only)
+// oznacava placanje kao neplaceno - samo administratori
 func (h *PaymentHandler) MarkPaymentAsUnpaid(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idParam)
@@ -349,7 +341,7 @@ func (h *PaymentHandler) MarkPaymentAsUnpaid(c *gin.Context) {
 	})
 }
 
-// DeletePayment handles deleting a payment (admin only)
+// brise placanje - samo administratori mogu brisati placanja
 func (h *PaymentHandler) DeletePayment(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idParam)
@@ -369,7 +361,8 @@ func (h *PaymentHandler) DeletePayment(c *gin.Context) {
 	})
 }
 
-// UpdateOverduePayments handles updating overdue payments (admin only)
+// azurira zakasnela placanja - samo administratori
+// prolazi kroz sva placanja i oznacava zakasnela
 func (h *PaymentHandler) UpdateOverduePayments(c *gin.Context) {
 	count, err := h.paymentService.UpdateOverduePayments()
 	if err != nil {

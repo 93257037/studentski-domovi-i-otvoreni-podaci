@@ -8,27 +8,25 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// MongoDB represents a MongoDB connection
+// MongoDB - predstavlja konekciju sa MongoDB bazom podataka
 type MongoDB struct {
 	client   *mongo.Client
 	database *mongo.Database
 }
 
-// NewMongoDB creates a new MongoDB connection
+// kreira novu MongoDB konekciju sa prosledjenim URI-jem i imenom baze
+// testira konekciju i vraca MongoDB instancu
 func NewMongoDB(uri, dbName string) (*MongoDB, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Set client options
 	clientOptions := options.Client().ApplyURI(uri)
 
-	// Connect to MongoDB
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	// Check the connection
 	err = client.Ping(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -42,12 +40,12 @@ func NewMongoDB(uri, dbName string) (*MongoDB, error) {
 	}, nil
 }
 
-// GetCollection returns a collection from the database
+// vraca kolekciju iz baze podataka po imenu
 func (m *MongoDB) GetCollection(name string) *mongo.Collection {
 	return m.database.Collection(name)
 }
 
-// Close closes the MongoDB connection
+// zatvara MongoDB konekciju
 func (m *MongoDB) Close() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -55,7 +53,7 @@ func (m *MongoDB) Close() error {
 	return m.client.Disconnect(ctx)
 }
 
-// GetDatabase returns the database instance
+// vraca instancu baze podataka
 func (m *MongoDB) GetDatabase() *mongo.Database {
 	return m.database
 }

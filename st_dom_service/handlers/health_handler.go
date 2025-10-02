@@ -6,15 +6,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// HealthHandler handles health check requests
+// HealthHandler - rukuje zahtevima za proveru zdravlja servisa
 type HealthHandler struct{}
 
-// NewHealthHandler creates a new HealthHandler
+// kreira novi HealthHandler
 func NewHealthHandler() *HealthHandler {
 	return &HealthHandler{}
 }
 
-// Health check endpoint
+// provera zdravlja servisa - vraca status da li je servis aktivan
 func (h *HealthHandler) Health(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "healthy",

@@ -1,8 +1,25 @@
 services:
+  # API Gateway - Single entry point for all services
+  api_gateway:
+    image: nginx:alpine
+    ports:
+      - "80:80"  # Main API Gateway port
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - sso_service
+      - st_dom_service
+      - open_data_service
+    networks:
+      - app_network
+    restart: unless-stopped
+
   sso_service:
     build: ./sso_service
-    ports:
-      - "8080:8080"
+    # Ports removed - only accessible through API Gateway
+    # Uncomment below for direct access during development/debugging
+    # ports:
+    #   - "8080:8080"
     environment:
       - MONGODB_URI=mongodb://mongodb:27017
       - DATABASE_NAME=sso_db
@@ -16,8 +33,10 @@ services:
 
   st_dom_service:
     build: ./st_dom_service
-    ports:
-      - "8081:8081"
+    # Ports removed - only accessible through API Gateway
+    # Uncomment below for direct access during development/debugging
+    # ports:
+    #   - "8081:8081"
     environment:
       - MONGODB_URI=mongodb://mongodb:27017
       - DATABASE_NAME=st_dom_db
@@ -31,23 +50,28 @@ services:
 
   open_data_service:
     build: ./open_data_service
-    ports:
-      - "8082:8082"
+    # Ports removed - only accessible through API Gateway
+    # Uncomment below for direct access during development/debugging
+    # ports:
+    #   - "8082:8082"
     environment:
       - MONGODB_URI=mongodb://mongodb:27017
       - DATABASE_NAME=st_dom_db
       - PORT=8082
       - GIN_MODE=release
+      - ST_DOM_SERVICE_URL=http://st_dom_service:8081
     depends_on:
       - mongodb
+      - st_dom_service
     networks:
       - app_network
 
   mongodb:
     image: mongo:7.0
     ports:
-      - "27017:27017"
+      - "27018:27017"
     volumes:
+    # - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
       - mongodb_data:/data/db
     networks:
       - app_network

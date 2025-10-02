@@ -7,7 +7,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Config holds all configuration values
+// Config - drzi sve konfiguracione vrednosti za servis
 type Config struct {
 	MongoDBURI   string
 	DatabaseName string
@@ -16,9 +16,9 @@ type Config struct {
 	GinMode      string
 }
 
-// LoadConfig loads configuration from environment variables
+// ucitava konfiguraciju iz environment varijabli ili config.env fajla
+// postavlja default vrednosti ako varijable nisu definisane
 func LoadConfig() *Config {
-	// Try to load from config.env file
 	if err := godotenv.Load("config.env"); err != nil {
 		log.Println("No config.env file found, using environment variables")
 	}
@@ -34,7 +34,7 @@ func LoadConfig() *Config {
 	return config
 }
 
-// getEnv gets an environment variable with a fallback value
+// dobija environment varijablu ili vraca default vrednost ako ne postoji
 func getEnv(key, fallback string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value

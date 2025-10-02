@@ -11,19 +11,20 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// PrihvacenaAplikacijaHandler handles accepted application-related requests
+// PrihvacenaAplikacijaHandler - rukuje zahtevima vezanim za prihvacene aplikacije
 type PrihvacenaAplikacijaHandler struct {
 	prihvacenaAplikacijaService *services.PrihvacenaAplikacijaService
 }
 
-// NewPrihvacenaAplikacijaHandler creates a new PrihvacenaAplikacijaHandler
+// kreira novi PrihvacenaAplikacijaHandler sa potrebnim servisom
 func NewPrihvacenaAplikacijaHandler(prihvacenaAplikacijaService *services.PrihvacenaAplikacijaService) *PrihvacenaAplikacijaHandler {
 	return &PrihvacenaAplikacijaHandler{
 		prihvacenaAplikacijaService: prihvacenaAplikacijaService,
 	}
 }
 
-// ApproveAplikacija handles approving an application (admin only)
+// odobrava aplikaciju za sobu - samo administratori mogu odobriti aplikacije
+// kreira prihvacenu aplikaciju i generiše racun za placanje
 func (h *PrihvacenaAplikacijaHandler) ApproveAplikacija(c *gin.Context) {
 	var req models.ApproveAplikacijaRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -43,7 +44,7 @@ func (h *PrihvacenaAplikacijaHandler) ApproveAplikacija(c *gin.Context) {
 	})
 }
 
-// GetPrihvacenaAplikacija handles retrieving an accepted application by ID
+// dobija prihvacenu aplikaciju po ID-u
 func (h *PrihvacenaAplikacijaHandler) GetPrihvacenaAplikacija(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idParam)
@@ -63,7 +64,7 @@ func (h *PrihvacenaAplikacijaHandler) GetPrihvacenaAplikacija(c *gin.Context) {
 	})
 }
 
-// GetAllPrihvaceneAplikacije handles retrieving all accepted applications
+// dobija sve prihvacene aplikacije
 func (h *PrihvacenaAplikacijaHandler) GetAllPrihvaceneAplikacije(c *gin.Context) {
 	prihvaceneAplikacije, err := h.prihvacenaAplikacijaService.GetAllPrihvaceneAplikacije()
 	if err != nil {
@@ -77,7 +78,7 @@ func (h *PrihvacenaAplikacijaHandler) GetAllPrihvaceneAplikacije(c *gin.Context)
 	})
 }
 
-// GetPrihvaceneAplikacijeForUser handles retrieving accepted applications for a user
+// dobija sve prihvacene aplikacije za odredjenog korisnika
 func (h *PrihvacenaAplikacijaHandler) GetPrihvaceneAplikacijeForUser(c *gin.Context) {
 	userIDParam := c.Param("userId")
 	userID, err := primitive.ObjectIDFromHex(userIDParam)
@@ -98,7 +99,7 @@ func (h *PrihvacenaAplikacijaHandler) GetPrihvaceneAplikacijeForUser(c *gin.Cont
 	})
 }
 
-// GetPrihvaceneAplikacijeForRoom handles retrieving accepted applications for a room
+// dobija sve prihvacene aplikacije za odredjenu sobu
 func (h *PrihvacenaAplikacijaHandler) GetPrihvaceneAplikacijeForRoom(c *gin.Context) {
 	sobaIDParam := c.Param("sobaId")
 	sobaID, err := primitive.ObjectIDFromHex(sobaIDParam)
@@ -119,7 +120,7 @@ func (h *PrihvacenaAplikacijaHandler) GetPrihvaceneAplikacijeForRoom(c *gin.Cont
 	})
 }
 
-// GetPrihvaceneAplikacijeForAcademicYear handles retrieving accepted applications for an academic year
+// dobija sve prihvacene aplikacije za odredjenu skolsku godinu
 func (h *PrihvacenaAplikacijaHandler) GetPrihvaceneAplikacijeForAcademicYear(c *gin.Context) {
 	academicYear := c.Query("academic_year")
 	fmt.Printf("DEBUG: st_dom_service received academicYear query: '%s'\n", academicYear)
@@ -143,9 +144,9 @@ func (h *PrihvacenaAplikacijaHandler) GetPrihvaceneAplikacijeForAcademicYear(c *
 	})
 }
 
-// GetTopStudentsByProsek handles retrieving top N students ranked by prosek
+// dobija najbolje studente rangirane po proseku
+// prima limit kao parametar (default 10)
 func (h *PrihvacenaAplikacijaHandler) GetTopStudentsByProsek(c *gin.Context) {
-	// Get limit from query parameter, default to 10
 	limitStr := c.DefaultQuery("limit", "10")
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 {
@@ -165,7 +166,7 @@ func (h *PrihvacenaAplikacijaHandler) GetTopStudentsByProsek(c *gin.Context) {
 	})
 }
 
-// GetTopStudentsByProsekForAcademicYear handles retrieving top N students for a specific academic year
+// dobija najbolje studente za odredjenu skolsku godinu rangirane po proseku
 func (h *PrihvacenaAplikacijaHandler) GetTopStudentsByProsekForAcademicYear(c *gin.Context) {
 	academicYear := c.Param("academicYear")
 	if academicYear == "" {
@@ -173,7 +174,6 @@ func (h *PrihvacenaAplikacijaHandler) GetTopStudentsByProsekForAcademicYear(c *g
 		return
 	}
 
-	// Get limit from query parameter, default to 10
 	limitStr := c.DefaultQuery("limit", "10")
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 {
@@ -194,7 +194,7 @@ func (h *PrihvacenaAplikacijaHandler) GetTopStudentsByProsekForAcademicYear(c *g
 	})
 }
 
-// GetTopStudentsByProsekForRoom handles retrieving top N students for a specific room
+// dobija najbolje studente za odredjenu sobu rangirane po proseku
 func (h *PrihvacenaAplikacijaHandler) GetTopStudentsByProsekForRoom(c *gin.Context) {
 	sobaIDParam := c.Param("sobaId")
 	sobaID, err := primitive.ObjectIDFromHex(sobaIDParam)
@@ -203,7 +203,6 @@ func (h *PrihvacenaAplikacijaHandler) GetTopStudentsByProsekForRoom(c *gin.Conte
 		return
 	}
 
-	// Get limit from query parameter, default to 10
 	limitStr := c.DefaultQuery("limit", "10")
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 {
@@ -224,9 +223,8 @@ func (h *PrihvacenaAplikacijaHandler) GetTopStudentsByProsekForRoom(c *gin.Conte
 	})
 }
 
-// GetMyPrihvaceneAplikacije handles retrieving accepted applications for the current user
+// dobija prihvacene aplikacije trenutno ulogovanog korisnika
 func (h *PrihvacenaAplikacijaHandler) GetMyPrihvaceneAplikacije(c *gin.Context) {
-	// Extract user ID from JWT token
 	userIDClaim, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
@@ -251,7 +249,7 @@ func (h *PrihvacenaAplikacijaHandler) GetMyPrihvaceneAplikacije(c *gin.Context) 
 	})
 }
 
-// DeletePrihvacenaAplikacija handles deleting an accepted application (admin only)
+// brise prihvacenu aplikaciju - samo administratori
 func (h *PrihvacenaAplikacijaHandler) DeletePrihvacenaAplikacija(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idParam)
@@ -271,7 +269,8 @@ func (h *PrihvacenaAplikacijaHandler) DeletePrihvacenaAplikacija(c *gin.Context)
 	})
 }
 
-// EvictStudent handles evicting a student from their room (admin only)
+// izbacuje studenta iz sobe - samo administratori mogu izbaciti studenta
+// prima razlog izbacivanja i uklanja studenta iz sobe
 func (h *PrihvacenaAplikacijaHandler) EvictStudent(c *gin.Context) {
 	var req models.EvictStudentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -292,9 +291,8 @@ func (h *PrihvacenaAplikacijaHandler) EvictStudent(c *gin.Context) {
 	})
 }
 
-// CheckoutFromRoom handles a student voluntarily leaving their room
+// student dobrovoljno napusta sobu - korisnik moze sam da se odjavi iz sobe
 func (h *PrihvacenaAplikacijaHandler) CheckoutFromRoom(c *gin.Context) {
-	// Extract user ID from JWT token
 	userIDClaim, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
@@ -318,7 +316,8 @@ func (h *PrihvacenaAplikacijaHandler) CheckoutFromRoom(c *gin.Context) {
 	})
 }
 
-// CheckUserRoomStatus checks if a user has an active room assignment (for inter-service communication)
+// proverava da li korisnik ima aktivnu sobu - za komunikaciju izmedju servisa
+// koristi se od strane SSO servisa da proveri da li korisnik moze da obrise nalog
 func (h *PrihvacenaAplikacijaHandler) CheckUserRoomStatus(c *gin.Context) {
 	userIDParam := c.Param("userId")
 	userID, err := primitive.ObjectIDFromHex(userIDParam)

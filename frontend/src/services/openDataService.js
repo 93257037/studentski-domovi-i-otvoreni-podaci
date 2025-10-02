@@ -1,10 +1,14 @@
-const API_BASE_URL = process.env.REACT_APP_OPEN_DATA_SERVICE_URL || 'http://localhost:8082/api/v1';
+// API Gateway URL - svi servisi su dostupni kroz jedan gateway
+const API_BASE_URL = process.env.REACT_APP_API_GATEWAY_URL || 'http://localhost/api/v1';
 
+// servis za komunikaciju sa open_data_service API-jem
+// rukuje pretragom domova, soba i statistikama
 class OpenDataService {
   constructor() {
     this.baseURL = API_BASE_URL;
   }
 
+  // pravi HTTP zahtev bez automatskog dodavanja tokena (javni API)
   async makeRequest(endpoint, options = {}) {
     const config = {
       headers: {
@@ -25,35 +29,35 @@ class OpenDataService {
     return response.json();
   }
 
-  // Search student dormitories by name (ime)
+  // pretrazuje studentske domove po imenu
   async searchStDomsByIme(imePattern) {
     const params = new URLSearchParams({ ime: imePattern });
     return this.makeRequest(`/st-doms/search-by-ime?${params}`);
   }
 
-  // Search student dormitories by address
+  // pretrazuje studentske domove po adresi
   async searchStDomsByAddress(addressPattern) {
     const params = new URLSearchParams({ address: addressPattern });
     return this.makeRequest(`/st-doms/search-by-address?${params}`);
   }
 
-  // Get all student dormitories
+  // dobija sve studentske domove
   async getAllStDoms() {
     return this.makeRequest('/st-doms');
   }
 
-  // Get all rooms
+  // dobija sve sobe
   async getAllRooms() {
     return this.makeRequest('/rooms');
   }
 
-  // Filter rooms by luxury amenities
+  // filtrira sobe po luksuznim sadrzajima
   async filterRoomsByLuksuz(luksuzi) {
     const params = new URLSearchParams({ luksuzi: luksuzi.join(',') });
     return this.makeRequest(`/rooms/filter-by-luksuz?${params}`);
   }
 
-  // Filter rooms by bed capacity
+  // filtrira sobe po broju kreveta
   async filterRoomsByKrevetnost(exact, min, max) {
     const params = new URLSearchParams();
     if (exact) params.append('exact', exact);
@@ -62,7 +66,7 @@ class OpenDataService {
     return this.makeRequest(`/rooms/filter-by-krevetnost?${params}`);
   }
 
-  // Advanced room filtering
+  // napredna pretraga soba sa vise kriterijuma
   async advancedFilterRooms(luksuzi, stDomId, address, exact, min, max) {
     const params = new URLSearchParams();
     if (luksuzi && luksuzi.length > 0) params.append('luksuzi', luksuzi.join(','));
@@ -74,7 +78,7 @@ class OpenDataService {
     return this.makeRequest(`/rooms/advanced-filter?${params}`);
   }
 
-  // Get statistics
+  // dobija statistike
   async getTopFullStDoms() {
     return this.makeRequest('/statistics/top-full-st-doms');
   }
@@ -91,14 +95,13 @@ class OpenDataService {
     return this.makeRequest('/statistics/st-dom-highest-average-prosek');
   }
 
-  // Inter-service communication methods
+  // metode za komunikaciju izmedju servisa
   async getPrihvaceneAplikacijeForAcademicYear(academicYear, token) {
     const headers = {};
     if (token) {
       headers.Authorization = `Bearer ${token}`;
     }
     
-    // Use query parameter to avoid URL encoding issues with forward slashes
     const params = new URLSearchParams({ academic_year: academicYear });
     const endpoint = `/inter-service/prihvacene-aplikacije/academic-year?${params}`;
     
@@ -107,7 +110,7 @@ class OpenDataService {
     });
   }
 
-  // Get accepted applications for a specific room
+  // dobija prihvacene aplikacije za odredjenu sobu
   async getPrihvaceneAplikacijeForRoom(roomId, token) {
     const headers = {};
     if (token) {
@@ -121,7 +124,7 @@ class OpenDataService {
     });
   }
 
-  // Get all accepted applications
+  // dobija sve prihvacene aplikacije
   async getPrihvaceneAplikacije(token) {
     const headers = {};
     if (token) {
@@ -135,7 +138,7 @@ class OpenDataService {
     });
   }
 
-  // Get accepted applications for a specific user
+  // dobija prihvacene aplikacije za odredjenog korisnika
   async getPrihvaceneAplikacijeForUser(userId, token) {
     const headers = {};
     if (token) {

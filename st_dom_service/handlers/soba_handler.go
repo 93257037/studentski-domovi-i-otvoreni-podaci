@@ -9,13 +9,13 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// SobaHandler handles room-related requests
+// SobaHandler - rukuje zahtevima vezanim za sobe
 type SobaHandler struct {
 	sobaService  *services.SobaService
 	stDomService *services.StDomService
 }
 
-// NewSobaHandler creates a new SobaHandler
+// kreira novi SobaHandler sa potrebnim servisima
 func NewSobaHandler(sobaService *services.SobaService, stDomService *services.StDomService) *SobaHandler {
 	return &SobaHandler{
 		sobaService:  sobaService,
@@ -23,7 +23,8 @@ func NewSobaHandler(sobaService *services.SobaService, stDomService *services.St
 	}
 }
 
-// CreateSoba handles creating a new room
+// kreira novu sobu u studentskom domu
+// proverava da li dom postoji pre kreiranja sobe
 func (h *SobaHandler) CreateSoba(c *gin.Context) {
 	var req models.CreateSobaRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -31,7 +32,6 @@ func (h *SobaHandler) CreateSoba(c *gin.Context) {
 		return
 	}
 
-	// Check if the dormitory exists
 	_, err := h.stDomService.GetStDomByID(req.StDomID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Student dormitory not found"})
@@ -50,7 +50,7 @@ func (h *SobaHandler) CreateSoba(c *gin.Context) {
 	})
 }
 
-// GetSoba handles retrieving a room by ID
+// dobija sobu po ID-u iz baze podataka
 func (h *SobaHandler) GetSoba(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idParam)
@@ -70,7 +70,7 @@ func (h *SobaHandler) GetSoba(c *gin.Context) {
 	})
 }
 
-// GetAllSobas handles retrieving all rooms
+// dobija sve sobe iz baze podataka
 func (h *SobaHandler) GetAllSobas(c *gin.Context) {
 	sobas, err := h.sobaService.GetAllSobas()
 	if err != nil {
@@ -83,7 +83,8 @@ func (h *SobaHandler) GetAllSobas(c *gin.Context) {
 	})
 }
 
-// UpdateSoba handles updating a room
+// azurira podatke o sobi
+// prima ID sobe i nove podatke za azuriranje
 func (h *SobaHandler) UpdateSoba(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idParam)
@@ -110,7 +111,7 @@ func (h *SobaHandler) UpdateSoba(c *gin.Context) {
 	})
 }
 
-// DeleteSoba handles deleting a room
+// brise sobu iz baze podataka
 func (h *SobaHandler) DeleteSoba(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idParam)

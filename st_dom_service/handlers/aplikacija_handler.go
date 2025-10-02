@@ -9,13 +9,13 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// AplikacijaHandler handles application-related requests
+// AplikacijaHandler - rukuje zahtevima vezanim za aplikacije za sobe
 type AplikacijaHandler struct {
 	aplikacijaService *services.AplikacijaService
 	sobaService       *services.SobaService
 }
 
-// NewAplikacijaHandler creates a new AplikacijaHandler
+// kreira novi AplikacijaHandler sa potrebnim servisima
 func NewAplikacijaHandler(aplikacijaService *services.AplikacijaService, sobaService *services.SobaService) *AplikacijaHandler {
 	return &AplikacijaHandler{
 		aplikacijaService: aplikacijaService,
@@ -23,9 +23,9 @@ func NewAplikacijaHandler(aplikacijaService *services.AplikacijaService, sobaSer
 	}
 }
 
-// CreateAplikacija handles creating a new application (user only)
+// kreira novu aplikaciju za sobu - samo korisnici mogu da kreiraju aplikacije
+// izvlaci podatke iz JWT tokena i proverava da li je soba dostupna
 func (h *AplikacijaHandler) CreateAplikacija(c *gin.Context) {
-	// Extract user ID from JWT token
 	userIDClaim, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
@@ -38,7 +38,6 @@ func (h *AplikacijaHandler) CreateAplikacija(c *gin.Context) {
 		return
 	}
 
-	// Extract user role from JWT token
 	userRole, exists := c.Get("role")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User role not found in token"})
@@ -56,7 +55,6 @@ func (h *AplikacijaHandler) CreateAplikacija(c *gin.Context) {
 		return
 	}
 
-	// Check if the room exists
 	_, err := h.sobaService.GetSobaByID(req.SobaID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Room not found"})
@@ -75,7 +73,8 @@ func (h *AplikacijaHandler) CreateAplikacija(c *gin.Context) {
 	})
 }
 
-// GetAplikacija handles retrieving an application by ID
+// dobija aplikaciju po ID-u - korisnici mogu videti samo svoje aplikacije
+// administratori mogu videti sve aplikacije
 func (h *AplikacijaHandler) GetAplikacija(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idParam)
@@ -84,7 +83,6 @@ func (h *AplikacijaHandler) GetAplikacija(c *gin.Context) {
 		return
 	}
 
-	// Extract user ID and role from JWT token
 	userIDClaim, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
@@ -109,7 +107,6 @@ func (h *AplikacijaHandler) GetAplikacija(c *gin.Context) {
 		return
 	}
 
-	// Users can only see their own applications, admins can see all
 	if userRole == "user" && aplikacija.UserID != userID {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied: application does not belong to user"})
 		return
@@ -120,24 +117,17 @@ func (h *AplikacijaHandler) GetAplikacija(c *gin.Context) {
 	})
 }
 
-// GetMyAplikacije handles retrieving all applications for the current user
+// dobija sve aplikacije trenutno ulogovanog korisnika
 func (h *AplikacijaHandler) GetMyAplikacije(c *gin.Context) {
-	// Extract user ID from JWT token
-	userIDClaim, exists := c.Get("userID")
+	userIDClaim, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
 		return
 	}
 
-	userIDStr, ok := userIDClaim.(string)
+	userID, ok := userIDClaim.(primitive.ObjectID)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID format"})
-		return
-	}
-
-	userID, err := primitive.ObjectIDFromHex(userIDStr)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID"})
 		return
 	}
 
@@ -152,9 +142,8 @@ func (h *AplikacijaHandler) GetMyAplikacije(c *gin.Context) {
 	})
 }
 
-// GetAllAplikacije handles retrieving all applications (admin only)
+// dobija sve aplikacije - samo za administratore
 func (h *AplikacijaHandler) GetAllAplikacije(c *gin.Context) {
-	// Extract user role from JWT token
 	userRole, exists := c.Get("role")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User role not found in token"})
@@ -177,9 +166,8 @@ func (h *AplikacijaHandler) GetAllAplikacije(c *gin.Context) {
 	})
 }
 
-// GetAplikacijeForRoom handles retrieving all applications for a specific room (admin only)
+// dobija sve aplikacije za odredjenu sobu - samo za administratore
 func (h *AplikacijaHandler) GetAplikacijeForRoom(c *gin.Context) {
-	// Extract user role from JWT token
 	userRole, exists := c.Get("role")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User role not found in token"})
@@ -198,7 +186,6 @@ func (h *AplikacijaHandler) GetAplikacijeForRoom(c *gin.Context) {
 		return
 	}
 
-	// Check if the room exists
 	_, err = h.sobaService.GetSobaByID(sobaID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Room not found"})
@@ -216,7 +203,7 @@ func (h *AplikacijaHandler) GetAplikacijeForRoom(c *gin.Context) {
 	})
 }
 
-// UpdateAplikacija handles updating an application (user can update their own)
+// azurira aplikaciju - korisnik moze azurirati samo svoju aplikaciju
 func (h *AplikacijaHandler) UpdateAplikacija(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idParam)
@@ -225,22 +212,15 @@ func (h *AplikacijaHandler) UpdateAplikacija(c *gin.Context) {
 		return
 	}
 
-	// Extract user ID from JWT token
-	userIDClaim, exists := c.Get("userID")
+	userIDClaim, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
 		return
 	}
 
-	userIDStr, ok := userIDClaim.(string)
+	userID, ok := userIDClaim.(primitive.ObjectID)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID format"})
-		return
-	}
-
-	userID, err := primitive.ObjectIDFromHex(userIDStr)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID"})
 		return
 	}
 
@@ -262,7 +242,7 @@ func (h *AplikacijaHandler) UpdateAplikacija(c *gin.Context) {
 	})
 }
 
-// DeleteAplikacija handles deleting an application (user can delete their own, admin can delete any)
+// brise aplikaciju - korisnik moze brisati svoju, admin moze brisati bilo koju
 func (h *AplikacijaHandler) DeleteAplikacija(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idParam)
@@ -271,14 +251,12 @@ func (h *AplikacijaHandler) DeleteAplikacija(c *gin.Context) {
 		return
 	}
 
-	// Extract user role from JWT token
 	userRole, roleExists := c.Get("role")
 	if !roleExists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User role not found in token"})
 		return
 	}
 
-	// If admin, allow deletion of any application
 	if userRole == "admin" {
 		err = h.aplikacijaService.DeleteAplikacijaByID(id)
 		if err != nil {
@@ -292,23 +270,15 @@ func (h *AplikacijaHandler) DeleteAplikacija(c *gin.Context) {
 		return
 	}
 
-	// For regular users, only allow deletion of their own applications
-	// Extract user ID from JWT token
-	userIDClaim, exists := c.Get("userID")
+	userIDClaim, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
 		return
 	}
 
-	userIDStr, ok := userIDClaim.(string)
+	userID, ok := userIDClaim.(primitive.ObjectID)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID format"})
-		return
-	}
-
-	userID, err := primitive.ObjectIDFromHex(userIDStr)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID"})
 		return
 	}
 

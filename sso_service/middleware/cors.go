@@ -4,7 +4,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// CORSMiddleware handles CORS headers
+// middleware za rukovanje CORS zaglavljima - omogucava cross-origin zahteve
+// postavlja potrebna zaglavlja za komunikaciju sa frontend aplikacijom
 func CORSMiddleware() gin.HandlerFunc {
 	return gin.HandlerFunc(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")

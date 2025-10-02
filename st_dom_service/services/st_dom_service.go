@@ -11,24 +11,23 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// StDomService handles student dormitory-related operations
+// StDomService - rukuje operacijama vezanim za studentske domove
 type StDomService struct {
 	collection *mongo.Collection
 }
 
-// NewStDomService creates a new StDomService
+// kreira novi StDomService sa kolekcijom baze podataka
 func NewStDomService(collection *mongo.Collection) *StDomService {
 	return &StDomService{
 		collection: collection,
 	}
 }
 
-// CreateStDom creates a new student dormitory
+// kreira novi studentski dom - proverava da li vec postoji dom sa istom adresom
+// cuva novi dom u bazu ako adresa nije zauzeta
 func (s *StDomService) CreateStDom(req models.CreateStDomRequest) (*models.StDom, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
-	// Check if dormitory with same address already exists
 	var existingStDom models.StDom
 	err := s.collection.FindOne(ctx, bson.M{"address": req.Address}).Decode(&existingStDom)
 	if err == nil {
@@ -38,10 +37,7 @@ func (s *StDomService) CreateStDom(req models.CreateStDomRequest) (*models.StDom
 		return nil, err
 	}
 
-	// Create new dormitory
 	stDom := models.NewStDom(req)
-
-	// Insert into database
 	result, err := s.collection.InsertOne(ctx, stDom)
 	if err != nil {
 		return nil, err
@@ -51,7 +47,7 @@ func (s *StDomService) CreateStDom(req models.CreateStDomRequest) (*models.StDom
 	return &stDom, nil
 }
 
-// GetStDomByID retrieves a student dormitory by ID
+// dobija studentski dom po ID-u iz baze podataka
 func (s *StDomService) GetStDomByID(id primitive.ObjectID) (*models.StDom, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -68,7 +64,7 @@ func (s *StDomService) GetStDomByID(id primitive.ObjectID) (*models.StDom, error
 	return &stDom, nil
 }
 
-// GetAllStDoms retrieves all student dormitories
+// dobija sve studentske domove iz baze podataka
 func (s *StDomService) GetAllStDoms() ([]models.StDom, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -87,12 +83,11 @@ func (s *StDomService) GetAllStDoms() ([]models.StDom, error) {
 	return stDoms, nil
 }
 
-// UpdateStDom updates a student dormitory
+// azurira podatke o studentskom domu - prima ID i nove podatke
+// proverava da li nova adresa vec postoji pre azuriranja
 func (s *StDomService) UpdateStDom(id primitive.ObjectID, req models.UpdateStDomRequest) (*models.StDom, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
-	// Build update document
 	update := bson.M{"$set": bson.M{"updated_at": time.Now()}}
 	if req.Ime != nil {
 		update["$set"].(bson.M)["ime"] = *req.Ime
@@ -107,7 +102,6 @@ func (s *StDomService) UpdateStDom(id primitive.ObjectID, req models.UpdateStDom
 		update["$set"].(bson.M)["email"] = *req.Email
 	}
 
-	// Check if address is being updated and already exists
 	if req.Address != nil {
 		var existingStDom models.StDom
 		err := s.collection.FindOne(ctx, bson.M{
@@ -122,7 +116,6 @@ func (s *StDomService) UpdateStDom(id primitive.ObjectID, req models.UpdateStDom
 		}
 	}
 
-	// Update the document
 	result, err := s.collection.UpdateOne(ctx, bson.M{"_id": id}, update)
 	if err != nil {
 		return nil, err
@@ -132,11 +125,10 @@ func (s *StDomService) UpdateStDom(id primitive.ObjectID, req models.UpdateStDom
 		return nil, errors.New("student dormitory not found")
 	}
 
-	// Return updated document
 	return s.GetStDomByID(id)
 }
 
-// DeleteStDom deletes a student dormitory
+// brise studentski dom iz baze podataka
 func (s *StDomService) DeleteStDom(id primitive.ObjectID) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

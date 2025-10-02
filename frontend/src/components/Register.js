@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import './Auth.css';
 
+// komponenta za registraciju novog korisnika - forma sa svim potrebnim podacima
 const Register = () => {
   const [formData, setFormData] = useState({
     username: '',
@@ -19,6 +20,7 @@ const Register = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  // rukuje promenama u input poljima
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -26,24 +28,22 @@ const Register = () => {
     });
   };
 
+  // rukuje slanjem forme za registraciju sa validacijom podataka
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
-    // Validate password confirmation
     if (formData.password !== formData.confirmPassword) {
       setError('Lozinke se ne poklapaju');
       return;
     }
 
-    // Validate password length
     if (formData.password.length < 6) {
       setError('Lozinka mora imati najmanje 6 karaktera');
       return;
     }
 
-    // Validate username length
     if (formData.username.length < 3 || formData.username.length > 20) {
       setError('Korisničko ime mora imati između 3 i 20 karaktera');
       return;

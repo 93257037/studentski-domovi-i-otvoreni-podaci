@@ -9,19 +9,20 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// AuthHandler handles authentication-related requests
+// AuthHandler - rukuje zahtevima za autentifikaciju
 type AuthHandler struct {
 	userService *services.UserService
 }
 
-// NewAuthHandler creates a new AuthHandler
+// kreira novi AuthHandler sa prosledjenim user servisom
 func NewAuthHandler(userService *services.UserService) *AuthHandler {
 	return &AuthHandler{
 		userService: userService,
 	}
 }
 
-// Register handles user registration
+// registracija korisnika - prima podatke, validira ih i kreira novi nalog
+// vraca gresku ako korisnik vec postoji ili su podaci neispravni
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req models.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -35,7 +36,6 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	// Clear password from response
 	user.Password = ""
 
 	c.JSON(http.StatusCreated, gin.H{
@@ -44,7 +44,8 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	})
 }
 
-// Login handles user login
+// prijava korisnika - proverava email i lozinku, vraca JWT token ako su ispravni
+// vraca gresku ako su podaci neispravni
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req models.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -65,7 +66,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	})
 }
 
-// GetProfile returns the current user's profile
+// dobija profil trenutno ulogovanog korisnika na osnovu JWT tokena
+// vraca podatke o korisniku bez lozinke
 func (h *AuthHandler) GetProfile(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -84,8 +86,8 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 	})
 }
 
-// DeleteAccount handles user account deletion
-// User cannot delete account if they have an active room assignment
+// brise nalog korisnika - prvo proverava da li korisnik ima aktivnu sobu
+// ne dozvoljava brisanje ako korisnik ima dodeljenu sobu u domu
 func (h *AuthHandler) DeleteAccount(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -104,7 +106,7 @@ func (h *AuthHandler) DeleteAccount(c *gin.Context) {
 	})
 }
 
-// Health check endpoint
+// provera zdravlja servisa - vraca status da li je servis aktivan
 func (h *AuthHandler) Health(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "healthy",

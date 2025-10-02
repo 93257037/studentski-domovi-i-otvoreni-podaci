@@ -3,6 +3,7 @@ import { authService } from '../services/authService';
 
 const AuthContext = createContext();
 
+// hook za koriscenje auth konteksta koji mora biti unutar AuthProvider-a
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -11,11 +12,13 @@ export const useAuth = () => {
   return context;
 };
 
+// provider komponenta za auth kontekst  upravlja stanjem korisnika i autentifikacijom
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
+  // inicijalizuje autentifikaciju kada se komponenta mount-uje
   useEffect(() => {
     const initAuth = async () => {
       if (token) {
@@ -34,6 +37,7 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, [token]);
 
+  // prijavljuje korisnika i cuva token u localStorage
   const login = async (email, password) => {
     try {
       const response = await authService.login(email, password);
@@ -52,6 +56,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // registruje novog korisnika
   const register = async (userData) => {
     try {
       const response = await authService.register(userData);
@@ -64,12 +69,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // odjavljuje korisnika i brise token
   const logout = () => {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
   };
 
+  // brise nalog korisnika i automatski ga odjavljuje
   const deleteAccount = async () => {
     try {
       await authService.deleteAccount(token);

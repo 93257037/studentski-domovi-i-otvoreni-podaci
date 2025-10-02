@@ -15,14 +15,14 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// UserService handles user-related operations
+// UserService - rukuje operacijama vezanim za korisnike
 type UserService struct {
 	collection      *mongo.Collection
 	jwtSecret       string
 	stDomServiceURL string
 }
 
-// NewUserService creates a new UserService
+// kreira novi UserService sa kolekcijom baze, JWT tajnim kljucem i URL-om st_dom servisa
 func NewUserService(collection *mongo.Collection, jwtSecret string, stDomServiceURL string) *UserService {
 	return &UserService{
 		collection:      collection,
@@ -31,12 +31,11 @@ func NewUserService(collection *mongo.Collection, jwtSecret string, stDomService
 	}
 }
 
-// RegisterUser registers a new user
+// registruje novog korisnika - proverava da li vec postoji, hesuje lozinku i cuva u bazu
+// vraca gresku ako korisnik sa istim email-om ili korisnickim imenom vec postoji
 func (s *UserService) RegisterUser(req models.RegisterRequest) (*models.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
-	// Check if user already exists
 	var existingUser models.User
 	err := s.collection.FindOne(ctx, bson.M{
 		"$or": []bson.M{
@@ -53,16 +52,12 @@ func (s *UserService) RegisterUser(req models.RegisterRequest) (*models.User, er
 		return nil, err
 	}
 
-	// Hash password
 	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create new user
 	user := models.NewUser(req, hashedPassword)
-
-	// Insert user into database
 	result, err := s.collection.InsertOne(ctx, user)
 	if err != nil {
 		return nil, err
@@ -72,12 +67,11 @@ func (s *UserService) RegisterUser(req models.RegisterRequest) (*models.User, er
 	return &user, nil
 }
 
-// LoginUser authenticates a user and returns a JWT token
+// prijavljuje korisnika - proverava email i lozinku, generiše JWT token
+// vraca token i podatke o korisniku ako su podaci ispravni
 func (s *UserService) LoginUser(req models.LoginRequest) (*models.LoginResponse, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
-	// Find user by email
 	var user models.User
 	err := s.collection.FindOne(ctx, bson.M{"email": req.Email}).Decode(&user)
 	if err != nil {
@@ -87,18 +81,15 @@ func (s *UserService) LoginUser(req models.LoginRequest) (*models.LoginResponse,
 		return nil, err
 	}
 
-	// Check password
 	if !utils.CheckPasswordHash(req.Password, user.Password) {
 		return nil, errors.New("invalid email or password")
 	}
 
-	// Generate JWT token
 	token, err := utils.GenerateJWT(user.ID, user.Username, user.Email, user.Role, s.jwtSecret)
 	if err != nil {
 		return nil, err
 	}
 
-	// Clear password from response
 	user.Password = ""
 
 	return &models.LoginResponse{
@@ -107,7 +98,8 @@ func (s *UserService) LoginUser(req models.LoginRequest) (*models.LoginResponse,
 	}, nil
 }
 
-// GetUserByID retrieves a user by ID
+// dobija korisnika po ID-u iz baze podataka
+// vraca podatke o korisniku bez lozinke
 func (s *UserService) GetUserByID(userID primitive.ObjectID) (*models.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -121,18 +113,15 @@ func (s *UserService) GetUserByID(userID primitive.ObjectID) (*models.User, erro
 		return nil, err
 	}
 
-	// Clear password from response
 	user.Password = ""
 	return &user, nil
 }
 
-// DeleteUser deletes a user account
-// First checks with st_dom_service if user has an active room assignment
+// brise korisnikov nalog - prvo poziva st_dom_service da proveri da li ima aktivnu sobu
+// ne dozvoljava brisanje ako korisnik ima dodeljenu sobu
 func (s *UserService) DeleteUser(userID primitive.ObjectID) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
-	// Check if user exists
 	var user models.User
 	err := s.collection.FindOne(ctx, bson.M{"_id": userID}).Decode(&user)
 	if err != nil {
@@ -142,7 +131,6 @@ func (s *UserService) DeleteUser(userID primitive.ObjectID) error {
 		return err
 	}
 
-	// Call st_dom_service to check if user has an active room
 	hasActiveRoom, err := s.checkUserHasActiveRoom(userID)
 	if err != nil {
 		return errors.New("failed to verify room status with dormitory service: " + err.Error())
@@ -152,7 +140,6 @@ func (s *UserService) DeleteUser(userID primitive.ObjectID) error {
 		return errors.New("cannot delete account: you must check out from your assigned room first")
 	}
 
-	// Proceed with deletion
 	result, err := s.collection.DeleteOne(ctx, bson.M{"_id": userID})
 	if err != nil {
 		return err
@@ -165,7 +152,8 @@ func (s *UserService) DeleteUser(userID primitive.ObjectID) error {
 	return nil
 }
 
-// checkUserHasActiveRoom calls the st_dom_service to check if user has an active room
+// poziva st_dom_service da proveri da li korisnik ima aktivnu sobu
+// salje HTTP GET zahtev i parsira odgovor
 func (s *UserService) checkUserHasActiveRoom(userID primitive.ObjectID) (bool, error) {
 	url := fmt.Sprintf("%s/api/v1/internal/users/%s/room-status", s.stDomServiceURL, userID.Hex())
 	

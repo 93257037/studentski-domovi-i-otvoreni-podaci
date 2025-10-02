@@ -10,6 +10,7 @@ import MyRoomInfo from './MyRoomInfo';
 import { openDataService } from '../services/openDataService';
 import './Dashboard.css';
 
+// glavna dashboard komponenta - prikazuje profil korisnika, akcije, statistike i pretragu
 const Dashboard = () => {
   const { user, logout, deleteAccount } = useAuth();
   const navigate = useNavigate();
@@ -21,7 +22,6 @@ const Dashboard = () => {
   const [showManageApplicationsModal, setShowManageApplicationsModal] = useState(false);
   const [showManageRoomsModal, setShowManageRoomsModal] = useState(false);
   
-  // Search states
   const [imeSearch, setImeSearch] = useState('');
   const [addressSearch, setAddressSearch] = useState('');
   const [imeResults, setImeResults] = useState([]);
@@ -31,7 +31,6 @@ const Dashboard = () => {
   const [imeError, setImeError] = useState('');
   const [addressError, setAddressError] = useState('');
 
-  // Statistics states
   const [statistics, setStatistics] = useState({
     topFull: [],
     topEmpty: [],
@@ -41,6 +40,7 @@ const Dashboard = () => {
   const [statisticsLoading, setStatisticsLoading] = useState(false);
   const [statisticsError, setStatisticsError] = useState('');
 
+  // rukuje brisanjem naloga korisnika
   const handleDeleteAccount = async () => {
     setDeleteLoading(true);
     const result = await deleteAccount();
@@ -53,6 +53,7 @@ const Dashboard = () => {
     setShowDeleteModal(false);
   };
 
+  // formatira datum u citljiv oblik
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('hr-HR', {
       year: 'numeric',
@@ -63,40 +64,38 @@ const Dashboard = () => {
     });
   };
 
+  // callback funkcija kada je dom uspesno kreiran
   const handleStDomSuccess = () => {
-    // You can add logic here to refresh the list of dormitories
-    // For now, we'll just show a success message
     alert('Studentski dom je uspješno kreiran!');
   };
 
+  // callback funkcija kada je soba uspesno kreirana
   const handleRoomSuccess = () => {
-    // You can add logic here to refresh the list of rooms
-    // For now, we'll just show a success message
     alert('Soba je uspješno kreirana!');
   };
 
+  // callback funkcija kada je aplikacija uspesno poslata
   const handleApplicationSuccess = () => {
     alert('Aplikacija je uspješno poslata!');
-    // Reload page to check for new room assignment
     window.location.reload();
   };
 
+  // callback funkcija kada se korisnik odjavi iz sobe
   const handleCheckout = () => {
-    // Reload page after checkout
     window.location.reload();
   };
 
+  // callback funkcija nakon upravljanja aplikacijama
   const handleManageApplicationsSuccess = () => {
-    // Callback after approving/rejecting applications
-    // You can add logic here if needed
+    // logika se moze dodati ovde po potrebi
   };
 
+  // callback funkcija nakon upravljanja sobama
   const handleManageRoomsSuccess = () => {
-    // Callback after room management actions
-    // You can add logic here if needed
+    // logika se moze dodati ovde po potrebi
   };
 
-  // Search functions
+  // pretrazuje domove po imenu
   const handleImeSearch = async (e) => {
     e.preventDefault();
     if (!imeSearch.trim()) {
@@ -119,6 +118,7 @@ const Dashboard = () => {
     }
   };
 
+  // pretrazuje domove po adresi
   const handleAddressSearch = async (e) => {
     e.preventDefault();
     if (!addressSearch.trim()) {
@@ -141,25 +141,28 @@ const Dashboard = () => {
     }
   };
 
+  // brise pretragu po imenu
   const clearImeSearch = () => {
     setImeSearch('');
     setImeResults([]);
     setImeError('');
   };
 
+  // brise pretragu po adresi
   const clearAddressSearch = () => {
     setAddressSearch('');
     setAddressResults([]);
     setAddressError('');
   };
 
+  // navigira na stranicu studentskog doma
   const handleStDomClick = (stDomId) => {
     if (stDomId) {
       navigate(`/st-dom/${stDomId}`);
     }
   };
 
-  // Statistics functions
+  // ucitava statistike domova sa servera
   const fetchStatistics = async () => {
     setStatisticsLoading(true);
     setStatisticsError('');
@@ -185,7 +188,7 @@ const Dashboard = () => {
     }
   };
 
-  // Load statistics when component mounts
+  // ucitava statistike kada se komponenta mount-uje
   useEffect(() => {
     fetchStatistics();
   }, []);
