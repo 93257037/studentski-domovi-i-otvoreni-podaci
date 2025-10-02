@@ -59,20 +59,6 @@ const AcademicYearApplications = () => {
     });
   };
 
-  // Redirect non-admin users
-  if (user?.role !== 'admin') {
-    return (
-      <div className="academic-year-container">
-        <div className="access-denied">
-          <h2>Pristup odbačen</h2>
-          <p>Ova stranica je dostupna samo administratorima.</p>
-          <button onClick={() => navigate('/dashboard')} className="back-button">
-            Povratak na početnu
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="academic-year-container">
