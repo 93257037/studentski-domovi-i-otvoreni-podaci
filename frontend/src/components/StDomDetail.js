@@ -180,7 +180,7 @@ const StDomDetail = () => {
           {filteredRooms.length > 0 ? (
             <div className="rooms-grid">
               {filteredRooms.map((room) => (
-                <div key={room.id} className="room-card">
+                <div key={room.id} className="room-card clickable-room" onClick={() => navigate(`/room/${room.id}`)}>
                   <div className="room-header">
                     <h3>Soba {room.id}</h3>
                     <span className="room-capacity">{room.krevetnost} kreveta</span>

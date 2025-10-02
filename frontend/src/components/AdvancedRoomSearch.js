@@ -303,7 +303,7 @@ const AdvancedRoomSearch = () => {
           ) : results.length > 0 ? (
             <div className="results-grid">
               {results.map((room, index) => (
-                <div key={room.id || room._id || index} className="room-card">
+                <div key={room.id || room._id || index} className="room-card clickable-room" onClick={() => navigate(`/room/${room.id || room._id}`)}>
                   <div className="room-header">
                     <h4>Soba #{index + 1}</h4>
                     <span className="room-capacity">{room.krevetnost} krevet{room.krevetnost !== 1 ? 'a' : ''}</span>

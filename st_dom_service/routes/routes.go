@@ -57,6 +57,9 @@ func SetupRoutes(r *gin.Engine, stDomHandler *handlers.StDomHandler, sobaHandler
 			prihvaceneAplikacije := user.Group("/prihvacene_aplikacije")
 			{
 				prihvaceneAplikacije.GET("/my", prihvacenaAplikacijaHandler.GetMyPrihvaceneAplikacije) // User gets their own accepted applications
+				prihvaceneAplikacije.GET("/", prihvacenaAplikacijaHandler.GetAllPrihvaceneAplikacije)                    // Get all accepted applications (available to all authenticated users)
+				prihvaceneAplikacije.GET("/user/:userId", prihvacenaAplikacijaHandler.GetPrihvaceneAplikacijeForUser)    // Get by user (available to all authenticated users)
+				prihvaceneAplikacije.GET("/room/:sobaId", prihvacenaAplikacijaHandler.GetPrihvaceneAplikacijeForRoom)    // Get by room (available to all authenticated users)
 				prihvaceneAplikacije.GET("/academic_year", prihvacenaAplikacijaHandler.GetPrihvaceneAplikacijeForAcademicYear) // Get by academic year (available to all authenticated users)
 				prihvaceneAplikacije.POST("/checkout", prihvacenaAplikacijaHandler.CheckoutFromRoom)    // User voluntarily leaves room
 			}
@@ -102,10 +105,7 @@ func SetupRoutes(r *gin.Engine, stDomHandler *handlers.StDomHandler, sobaHandler
 			{
 				adminPrihvaceneAplikacije.POST("/approve", prihvacenaAplikacijaHandler.ApproveAplikacija)                       // Approve application
 				adminPrihvaceneAplikacije.POST("/evict", prihvacenaAplikacijaHandler.EvictStudent)                             // Evict student from room
-				adminPrihvaceneAplikacije.GET("/", prihvacenaAplikacijaHandler.GetAllPrihvaceneAplikacije)                    // Get all accepted applications
 				adminPrihvaceneAplikacije.GET("/:id", prihvacenaAplikacijaHandler.GetPrihvacenaAplikacija)                    // Get accepted application by ID
-				adminPrihvaceneAplikacije.GET("/user/:userId", prihvacenaAplikacijaHandler.GetPrihvaceneAplikacijeForUser)    // Get by user
-				adminPrihvaceneAplikacije.GET("/room/:sobaId", prihvacenaAplikacijaHandler.GetPrihvaceneAplikacijeForRoom)    // Get by room
 				adminPrihvaceneAplikacije.GET("/ranking/top", prihvacenaAplikacijaHandler.GetTopStudentsByProsek)             // Get top students overall
 				adminPrihvaceneAplikacije.GET("/ranking/top/academic_year/:academicYear", prihvacenaAplikacijaHandler.GetTopStudentsByProsekForAcademicYear) // Get top students by year
 				adminPrihvaceneAplikacije.GET("/ranking/top/room/:sobaId", prihvacenaAplikacijaHandler.GetTopStudentsByProsekForRoom) // Get top students by room

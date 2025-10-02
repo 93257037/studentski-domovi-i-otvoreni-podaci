@@ -106,6 +106,48 @@ class OpenDataService {
       headers
     });
   }
+
+  // Get accepted applications for a specific room
+  async getPrihvaceneAplikacijeForRoom(roomId, token) {
+    const headers = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    
+    const endpoint = `/inter-service/prihvacene-aplikacije/room/${roomId}`;
+    
+    return this.makeRequest(endpoint, {
+      headers
+    });
+  }
+
+  // Get all accepted applications
+  async getPrihvaceneAplikacije(token) {
+    const headers = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    
+    const endpoint = `/inter-service/prihvacene-aplikacije`;
+    
+    return this.makeRequest(endpoint, {
+      headers
+    });
+  }
+
+  // Get accepted applications for a specific user
+  async getPrihvaceneAplikacijeForUser(userId, token) {
+    const headers = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    
+    const endpoint = `/inter-service/prihvacene-aplikacije/user/${userId}`;
+    
+    return this.makeRequest(endpoint, {
+      headers
+    });
+  }
 }
 
 export const openDataService = new OpenDataService();

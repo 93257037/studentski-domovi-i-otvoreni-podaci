@@ -5,6 +5,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import Dashboard from './components/Dashboard';
 import StDomDetail from './components/StDomDetail';
+import RoomDetail from './components/RoomDetail';
 import AdvancedRoomSearch from './components/AdvancedRoomSearch';
 import AcademicYearApplications from './components/AcademicYearApplications';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -47,6 +48,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <StDomDetail />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/room/:id" 
+            element={
+              <ProtectedRoute>
+                <RoomDetail />
               </ProtectedRoute>
             } 
           />

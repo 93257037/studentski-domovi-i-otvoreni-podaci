@@ -66,7 +66,7 @@ const ApplyToRoomButton = ({ room, stDom, onSuccess }) => {
 
   if (showForm) {
     return (
-      <div className="apply-form-container">
+      <div className="apply-form-container" onClick={(e) => e.stopPropagation()}>
         <div className="apply-form-header">
           <h4>Apliciraj za sobu</h4>
           {stDom && <p className="room-info">Dom: {stDom.ime}</p>}
@@ -136,7 +136,10 @@ const ApplyToRoomButton = ({ room, stDom, onSuccess }) => {
   return (
     <button 
       className="apply-to-room-button"
-      onClick={() => setShowForm(true)}
+      onClick={(e) => {
+        e.stopPropagation();
+        setShowForm(true);
+      }}
     >
       Apliciraj za sobu
     </button>
