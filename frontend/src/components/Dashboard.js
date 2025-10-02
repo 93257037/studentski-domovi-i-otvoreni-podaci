@@ -399,7 +399,15 @@ const Dashboard = () => {
 
         {/* Search Section */}
         <div className="search-section">
-          <h2>Pretraživanje studentskih domova</h2>
+          <div className="search-section-header">
+            <h2>Pretraživanje studentskih domova</h2>
+            <button 
+              onClick={() => navigate('/advanced-search')}
+              className="advanced-search-button"
+            >
+              Napredna pretraga soba
+            </button>
+          </div>
           
           {/* Ime Search */}
           <div className="search-card">
