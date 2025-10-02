@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { stDomService } from '../services/stDomService';
+import StDomRoomSearch from './StDomRoomSearch';
 import './StDomDetail.css';
 
 const StDomDetail = () => {
@@ -8,6 +9,7 @@ const StDomDetail = () => {
   const navigate = useNavigate();
   const [stDom, setStDom] = useState(null);
   const [rooms, setRooms] = useState([]);
+  const [filteredRooms, setFilteredRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -28,7 +30,9 @@ const StDomDetail = () => {
       
       // Fetch rooms for this dormitory
       const roomsResponse = await stDomService.getStDomRooms(id);
-      setRooms(roomsResponse.sobas || []);
+      const roomsData = roomsResponse.sobas || [];
+      setRooms(roomsData);
+      setFilteredRooms(roomsData); // Initially show all rooms
     } catch (error) {
       setError('Greška pri učitavanju podataka: ' + error.message);
     } finally {
@@ -64,6 +68,23 @@ const StDomDetail = () => {
 
   const handleBack = () => {
     navigate('/dashboard');
+  };
+
+  // Handle search results from the search component
+  const handleSearchResults = (searchResults) => {
+    if (searchResults === null) {
+      // Reset to show all rooms
+      setFilteredRooms(rooms);
+    } else {
+      // Show filtered results - extract just the room data since the search returns rooms with st_dom info
+      const roomsOnly = searchResults.map(result => ({
+        id: result.id,
+        krevetnost: result.krevetnost,
+        luksuzi: result.luksuzi,
+        created_at: result.created_at
+      }));
+      setFilteredRooms(roomsOnly);
+    }
   };
 
   if (loading) {
@@ -139,12 +160,25 @@ const StDomDetail = () => {
           </div>
         </div>
 
+        {/* Room Search */}
+        {stDom && (
+          <StDomRoomSearch 
+            stDomId={stDom.id || stDom._id} 
+            onSearchResults={handleSearchResults}
+          />
+        )}
+
         {/* Rooms Information */}
         <div className="detail-section">
-          <h2>Dostupne sobe ({rooms.length})</h2>
-          {rooms.length > 0 ? (
+          <h2>
+            {filteredRooms.length === rooms.length 
+              ? `Dostupne sobe (${rooms.length})`
+              : `Filtrirane sobe (${filteredRooms.length} od ${rooms.length})`
+            }
+          </h2>
+          {filteredRooms.length > 0 ? (
             <div className="rooms-grid">
-              {rooms.map((room) => (
+              {filteredRooms.map((room) => (
                 <div key={room.id} className="room-card">
                   <div className="room-header">
                     <h3>Soba {room.id}</h3>
@@ -169,7 +203,11 @@ const StDomDetail = () => {
             </div>
           ) : (
             <div className="no-rooms">
-              <p>Trenutno nema dostupnih soba u ovom studentskom domu.</p>
+              {rooms.length === 0 ? (
+                <p>Trenutno nema dostupnih soba u ovom studentskom domu.</p>
+              ) : (
+                <p>Nema soba koje odgovaraju vašim kriterijumima pretrage.</p>
+              )}
             </div>
           )}
         </div>

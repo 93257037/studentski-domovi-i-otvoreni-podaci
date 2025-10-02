@@ -1,0 +1,208 @@
+.st-dom-room-search {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 30px;
+  border: 1px solid #e9ecef;
+}
+
+.st-dom-room-search .search-header {
+  margin-bottom: 20px;
+}
+
+.st-dom-room-search .search-header h3 {
+  color: #2c3e50;
+  margin: 0 0 5px 0;
+  font-size: 1.4em;
+}
+
+.st-dom-room-search .search-header p {
+  color: #6c757d;
+  margin: 0;
+  font-size: 0.9em;
+}
+
+.st-dom-room-search .search-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.st-dom-room-search .form-section {
+  background: white;
+  padding: 15px;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+}
+
+.st-dom-room-search .form-section h4 {
+  color: #495057;
+  margin: 0 0 15px 0;
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+/* Checkbox styling */
+.st-dom-room-search .checkbox-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.st-dom-room-search .checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.st-dom-room-search .checkbox-label:hover {
+  background-color: #f8f9fa;
+}
+
+.st-dom-room-search .checkbox-label input[type="checkbox"] {
+  margin-right: 8px;
+  transform: scale(1.1);
+}
+
+.st-dom-room-search .checkbox-text {
+  font-size: 0.9em;
+  color: #495057;
+}
+
+/* Capacity options styling */
+.st-dom-room-search .capacity-options {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.st-dom-room-search .capacity-option {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.st-dom-room-search .capacity-option label {
+  font-size: 0.9em;
+  color: #495057;
+  font-weight: 500;
+}
+
+.st-dom-room-search .capacity-range {
+  padding-top: 10px;
+  border-top: 1px solid #e9ecef;
+}
+
+.st-dom-room-search .range-label {
+  margin: 0 0 10px 0;
+  font-size: 0.9em;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.st-dom-room-search .range-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+/* Form input styling */
+.st-dom-room-search .form-input {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9em;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.st-dom-room-search .form-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.st-dom-room-search .number-input {
+  max-width: 120px;
+}
+
+/* Error message styling */
+.st-dom-room-search .error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 10px 15px;
+  border-radius: 4px;
+  border: 1px solid #f5c6cb;
+  font-size: 0.9em;
+}
+
+/* Action buttons styling */
+.st-dom-room-search .form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.st-dom-room-search .search-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.st-dom-room-search .search-button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.st-dom-room-search .search-button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.st-dom-room-search .clear-button {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.st-dom-room-search .clear-button:hover {
+  background-color: #545b62;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .st-dom-room-search {
+    padding: 15px;
+  }
+  
+  .st-dom-room-search .checkbox-group {
+    grid-template-columns: 1fr;
+  }
+  
+  .st-dom-room-search .range-inputs {
+    grid-template-columns: 1fr;
+  }
+  
+  .st-dom-room-search .form-actions {
+    flex-direction: column;
+  }
+  
+  .st-dom-room-search .search-button,
+  .st-dom-room-search .clear-button {
+    width: 100%;
+  }
+}
