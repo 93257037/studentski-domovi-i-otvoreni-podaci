@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { openDataService } from '../services/openDataService';
+import ApplyToRoomButton from './ApplyToRoomButton';
 import './AdvancedRoomSearch.css';
 
 const AdvancedRoomSearch = () => {
@@ -344,6 +345,14 @@ const AdvancedRoomSearch = () => {
                       </>
                     )}
                   </div>
+                  <ApplyToRoomButton 
+                    room={room} 
+                    stDom={room.st_dom}
+                    onSuccess={() => {
+                      // Optionally refresh data or show success message
+                      console.log('Application submitted successfully');
+                    }}
+                  />
                 </div>
               ))}
             </div>

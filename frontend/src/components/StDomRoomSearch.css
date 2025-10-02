@@ -14,10 +14,11 @@
   color: #2c3e50;
   margin: 0 0 5px 0;
   font-size: 1.4em;
+  font-weight: 600;
 }
 
 .st-dom-room-search .search-header p {
-  color: #6c757d;
+  color: white;
   margin: 0;
   font-size: 0.9em;
 }

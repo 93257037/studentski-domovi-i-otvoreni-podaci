@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { stDomService } from '../services/stDomService';
 import StDomRoomSearch from './StDomRoomSearch';
+import ApplyToRoomButton from './ApplyToRoomButton';
 import './StDomDetail.css';
 
 const StDomDetail = () => {
@@ -198,6 +199,14 @@ const StDomDetail = () => {
                       <span className="value">{formatDate(room.created_at)}</span>
                     </div>
                   </div>
+                  <ApplyToRoomButton 
+                    room={room} 
+                    stDom={stDom}
+                    onSuccess={() => {
+                      // Optionally refresh data or show success message
+                      console.log('Application submitted successfully');
+                    }}
+                  />
                 </div>
               ))}
             </div>
