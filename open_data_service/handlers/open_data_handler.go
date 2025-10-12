@@ -178,11 +178,11 @@ func (h *OpenDataHandler) GetOccupancyHeatmap(c *gin.Context) {
 
 // ExportData exports data in CSV or JSON format
 // GET /api/v1/open-data/export
-// Query params: dataset (dorms, rooms, dorm-statistics, application-list, accepted-applications, amenities-report, occupancy-report, room-types), format (csv, json)
+// Query params: dataset (dorms, rooms, dorm-statistics, application-list, accepted-applications, dorm-trends, amenities-report, occupancy-report, room-types), format (csv, json)
 func (h *OpenDataHandler) ExportData(c *gin.Context) {
 	dataset := c.Query("dataset")
 	if dataset == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "dataset parameter is required (dorms, rooms, dorm-statistics, application-list, accepted-applications, amenities-report, occupancy-report, or room-types)"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "dataset parameter is required (dorms, rooms, dorm-statistics, application-list, accepted-applications, dorm-trends, amenities-report, occupancy-report, or room-types)"})
 		return
 	}
 

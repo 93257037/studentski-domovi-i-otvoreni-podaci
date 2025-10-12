@@ -400,8 +400,6 @@ const OpenDataDashboard = () => {
                   <th>Prihvaćeno</th>
                   <th>Stopa Prihvatanja</th>
                   <th>Prosečan Prosek</th>
-                  <th>Min. Prosek</th>
-                  <th>Maks. Prosek</th>
                 </tr>
               </thead>
               <tbody>
@@ -413,13 +411,11 @@ const OpenDataDashboard = () => {
                       <td>{year.accepted_applications}</td>
                       <td>{year.acceptance_rate?.toFixed(1) || 0}%</td>
                       <td>{year.average_grade?.toFixed(2) || 0}</td>
-                      <td>{year.min_grade}</td>
-                      <td>{year.max_grade}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="7" style={{textAlign: 'center', padding: '20px'}}>
+                    <td colSpan="5" style={{textAlign: 'center', padding: '20px'}}>
                       Nema dostupnih podataka o kretanjima
                     </td>
                   </tr>
@@ -478,6 +474,20 @@ const OpenDataDashboard = () => {
 
           <div className="export-section">
             <h3>Izvoz Podataka</h3>
+            <div className="export-buttons">
+              <button onClick={() => handleExport('dorm-trends', 'json')} className="btn btn-secondary">
+                Izvezi Kretanja po Domovima (JSON)
+              </button>
+              <button onClick={() => handleExport('dorm-trends', 'csv')} className="btn btn-secondary">
+                Izvezi Kretanja po Domovima (CSV)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="application-list-export">
+          <h3>Izvoz Liste Prijava</h3>
+          <div className="export-section">
             <div className="export-buttons">
               <button onClick={() => handleExport('application-list', 'json')} className="btn btn-secondary">
                 Izvezi Listu Prijava (JSON)

@@ -1067,6 +1067,8 @@ func (s *OpenDataService) ExportData(dataset string, format models.ExportFormat)
 		return s.exportAcceptedApplications(ctx, format)
 	case "yearly-trends", "godisnja-kretanja":
 		return s.exportYearlyTrends(ctx, format)
+	case "dorm-trends":
+		return s.exportDormTrends(ctx, format)
 	case "amenities-report":
 		return s.exportAmenitiesReport(ctx, format)
 	case "occupancy-report":
@@ -1219,15 +1221,26 @@ func (s *OpenDataService) exportYearlyTrends(ctx context.Context, format models.
 	}
 
 	if format == models.ExportFormatJSON {
+		// Create filtered version without min/max grades
+		var filteredTrends []map[string]interface{}
+		for _, year := range trends.YearlyTrends {
+			filteredTrends = append(filteredTrends, map[string]interface{}{
+				"akademska_godina":    year.AcademicYear,
+				"prijave":             year.TotalApplications,
+				"prihvaceno":          year.AcceptedApplications,
+				"stopa_prihvatanja":   year.AcceptanceRate,
+				"prosecan_prosek":     year.AverageGrade,
+			})
+		}
 		return map[string]interface{}{
-			"godisnji_kretanja": trends.YearlyTrends,
+			"godisnji_kretanja": filteredTrends,
 			"generisano":        time.Now(),
 		}, nil
 	}
 
-	// CSV format with Serbocroatian headers
+	// CSV format with Serbocroatian headers (without Min. Prosek and Maks. Prosek)
 	var csvData [][]string
-	csvData = append(csvData, []string{"Školska Godina", "Prijave", "Prihvaćeno", "Stopa Prihvatanja (%)", "Prosečan Prosek", "Min. Prosek", "Maks. Prosek"})
+	csvData = append(csvData, []string{"Školska Godina", "Prijave", "Prihvaćeno", "Stopa Prihvatanja (%)", "Prosečan Prosek"})
 
 	for _, year := range trends.YearlyTrends {
 		csvData = append(csvData, []string{
@@ -1236,8 +1249,46 @@ func (s *OpenDataService) exportYearlyTrends(ctx context.Context, format models.
 			fmt.Sprintf("%d", year.AcceptedApplications),
 			fmt.Sprintf("%.2f", year.AcceptanceRate),
 			fmt.Sprintf("%.2f", year.AverageGrade),
-			fmt.Sprintf("%d", year.MinGrade),
-			fmt.Sprintf("%d", year.MaxGrade),
+		})
+	}
+
+	return csvData, nil
+}
+
+// exportDormTrends exports dorm application trends data
+func (s *OpenDataService) exportDormTrends(ctx context.Context, format models.ExportFormat) (interface{}, error) {
+	trends, err := s.GetApplicationTrends()
+	if err != nil {
+		return nil, err
+	}
+
+	if format == models.ExportFormatJSON {
+		// Create filtered version without IDs
+		var filteredTrends []map[string]interface{}
+		for _, dorm := range trends.DormTrends {
+			filteredTrends = append(filteredTrends, map[string]interface{}{
+				"ime_doma":          dorm.DormName,
+				"ukupno_prijava":    dorm.TotalApplications,
+				"prihvaceno":        dorm.AcceptedApplications,
+				"stopa_prihvatanja": dorm.AcceptanceRate,
+			})
+		}
+		return map[string]interface{}{
+			"kretanja_po_domovima": filteredTrends,
+			"generisano":           time.Now(),
+		}, nil
+	}
+
+	// CSV format with Serbocroatian headers
+	var csvData [][]string
+	csvData = append(csvData, []string{"Ime Doma", "Ukupno Prijava", "Prihvaćeno", "Stopa Prihvatanja (%)"})
+
+	for _, dorm := range trends.DormTrends {
+		csvData = append(csvData, []string{
+			dorm.DormName,
+			fmt.Sprintf("%d", dorm.TotalApplications),
+			fmt.Sprintf("%d", dorm.AcceptedApplications),
+			fmt.Sprintf("%.2f", dorm.AcceptanceRate),
 		})
 	}
 
