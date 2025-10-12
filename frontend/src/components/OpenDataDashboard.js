@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { openDataService } from '../services/openDataService';
 import './OpenDataDashboard.css';
 
 // Open Data Dashboard - showcases all 6 open data functionalities
 const OpenDataDashboard = () => {
   const navigate = useNavigate();
+  const { token } = useAuth();
   const [activeTab, setActiveTab] = useState('statistics');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -33,6 +35,11 @@ const OpenDataDashboard = () => {
 
   // Occupancy Heatmap
   const [heatmapData, setHeatmapData] = useState(null);
+
+  // Academic Year Applications
+  const [academicYear, setAcademicYear] = useState('');
+  const [yearApplications, setYearApplications] = useState([]);
+  const [hasSearchedYear, setHasSearchedYear] = useState(false);
 
   // Load initial data
   useEffect(() => {
@@ -543,6 +550,166 @@ const OpenDataDashboard = () => {
     return 'low';
   };
 
+  const renderAcademicYearApplications = () => {
+    const handleYearSearch = async (e) => {
+      e.preventDefault();
+      if (!academicYear.trim()) {
+        setError('Molimo unesite akademsku godinu');
+        return;
+      }
+
+      // Validate academic year format (should be like 2024/2025)
+      const academicYearPattern = /^\d{4}\/\d{4}$/;
+      if (!academicYearPattern.test(academicYear.trim())) {
+        setError('Akademska godina mora biti u formatu YYYY/YYYY (npr. 2024/2025)');
+        return;
+      }
+
+      setLoading(true);
+      setError('');
+      setHasSearchedYear(true);
+      
+      try {
+        const response = await openDataService.getPrihvaceneAplikacijeForAcademicYear(academicYear.trim());
+        setYearApplications(response.data?.prihvacene_aplikacije || []);
+      } catch (error) {
+        setError('Greška pri dohvaćanju podataka: ' + error.message);
+        setYearApplications([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const clearYearSearch = () => {
+      setAcademicYear('');
+      setYearApplications([]);
+      setError('');
+      setHasSearchedYear(false);
+    };
+
+    const formatDate = (dateString) => {
+      if (!dateString) return 'N/A';
+      return new Date(dateString).toLocaleDateString('hr-HR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    };
+
+    return (
+      <div className="tab-content">
+        <h2>Prihvaćene aplikacije po akademskoj godini</h2>
+        <p className="description">Pretražite prihvaćene aplikacije za određenu akademsku godinu</p>
+
+        <div className="search-card">
+          <form onSubmit={handleYearSearch} className="search-form">
+            <div className="search-input-group">
+              <label htmlFor="academicYear">Akademska godina:</label>
+              <input
+                id="academicYear"
+                type="text"
+                value={academicYear}
+                onChange={(e) => setAcademicYear(e.target.value)}
+                placeholder="Unesite akademsku godinu (npr. 2024/2025)"
+                className="search-input"
+                disabled={loading}
+              />
+              <div className="button-group">
+                <button type="submit" className="btn btn-primary" disabled={loading}>
+                  {loading ? 'Pretraživanje...' : 'Pretraži'}
+                </button>
+                {academicYear && (
+                  <button type="button" onClick={clearYearSearch} className="btn btn-secondary" disabled={loading}>
+                    Obriši
+                  </button>
+                )}
+              </div>
+            </div>
+          </form>
+          
+          <div className="format-hint">
+            <p><strong>Format:</strong> Akademska godina mora biti u formatu YYYY/YYYY (npr. 2024/2025)</p>
+          </div>
+        </div>
+
+        <div className="export-section" style={{ marginTop: '20px' }}>
+          <h3>Izvoz Svih Prihvaćenih Aplikacija</h3>
+          <div className="export-buttons">
+            <button onClick={() => handleExport('accepted-applications', 'json')} className="btn btn-secondary">
+              Izvezi kao JSON
+            </button>
+            <button onClick={() => handleExport('accepted-applications', 'csv')} className="btn btn-secondary">
+              Izvezi kao CSV
+            </button>
+          </div>
+        </div>
+
+        {hasSearchedYear && !loading && (
+          <div className="results-section">
+            <div className="results-header">
+              <h3>Rezultati pretrage</h3>
+              <div className="results-info">
+                <span className="academic-year-label">Akademska godina: <strong>{academicYear}</strong></span>
+                <span className="count-label">Ukupno aplikacija: <strong>{yearApplications.length}</strong></span>
+              </div>
+            </div>
+
+            {yearApplications.length > 0 ? (
+              <div className="applications-grid">
+                {yearApplications.map((app, index) => (
+                  <div key={app.id || index} className="application-card">
+                    <div className="application-header">
+                      <h4>Aplikacija #{index + 1}</h4>
+                      <span className="application-id">ID: {app.id}</span>
+                    </div>
+                    
+                    <div className="application-details">
+                      <div className="detail-row">
+                        <span className="label">Korisnik ID:</span>
+                        <span className="value">{app.user_id}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="label">Broj indeksa:</span>
+                        <span className="value">{app.broj_indexa}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="label">Prosek:</span>
+                        <span className="value prosek">{app.prosek}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="label">Soba ID:</span>
+                        <span className="value">{app.soba_id}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="label">Akademska godina:</span>
+                        <span className="value">{app.academic_year}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="label">Kreirana:</span>
+                        <span className="value">{app.created_at ? formatDate(app.created_at) : 'N/A'}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="label">Ažurirana:</span>
+                        <span className="value">{app.updated_at ? formatDate(app.updated_at) : 'N/A'}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="no-results">
+                <h3>Nema rezultata</h3>
+                <p>Nisu pronađene prihvaćene aplikacije za akademsku godinu "{academicYear}".</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="open-data-dashboard">
       <header className="dashboard-header">
@@ -582,6 +749,12 @@ const OpenDataDashboard = () => {
         >
           🗺️ Karta Popunjenosti
         </button>
+        <button
+          className={activeTab === 'academic-year' ? 'active' : ''}
+          onClick={() => setActiveTab('academic-year')}
+        >
+          📚 Prijave po godini
+        </button>
       </nav>
 
       <div className="dashboard-content">
@@ -594,6 +767,7 @@ const OpenDataDashboard = () => {
             {activeTab === 'rooms' && renderRoomSearch()}
             {activeTab === 'trends' && renderTrends()}
             {activeTab === 'heatmap' && renderHeatmap()}
+            {activeTab === 'academic-year' && renderAcademicYearApplications()}
           </>
         )}
       </div>

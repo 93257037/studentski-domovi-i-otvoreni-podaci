@@ -272,12 +272,6 @@ const Dashboard = () => {
               </button>
             )}
             <button 
-              onClick={() => navigate('/academic-year-applications')}
-              className="academic-year-button"
-            >
-              Prihvaćene aplikacije po godini
-            </button>
-            <button 
               onClick={() => navigate('/open-data')}
               className="open-data-button"
             >

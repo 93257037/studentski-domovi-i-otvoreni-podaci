@@ -217,6 +217,19 @@ class OpenDataService {
     });
   }
 
+  /**
+   * Get accepted applications for a specific academic year
+   * This is now public data - no authentication required
+   * @param {string} academicYear - The academic year (e.g., "2024/2025")
+   * @returns {Promise} List of accepted applications for the academic year
+   */
+  async getPrihvaceneAplikacijeForAcademicYear(academicYear) {
+    const params = new URLSearchParams();
+    params.append('academic_year', academicYear);
+    
+    return this.makeRequest(`/open-data/applications/academic-year?${params}`);
+  }
+
   // ====================
   // Legacy/Backward Compatibility Methods
   // ====================

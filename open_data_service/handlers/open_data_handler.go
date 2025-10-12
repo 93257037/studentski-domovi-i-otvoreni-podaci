@@ -178,11 +178,11 @@ func (h *OpenDataHandler) GetOccupancyHeatmap(c *gin.Context) {
 
 // ExportData exports data in CSV or JSON format
 // GET /api/v1/open-data/export
-// Query params: dataset (dorms, rooms, dorm-statistics, application-analytics, amenities-report, occupancy-report, room-types), format (csv, json)
+// Query params: dataset (dorms, rooms, dorm-statistics, application-list, accepted-applications, amenities-report, occupancy-report, room-types), format (csv, json)
 func (h *OpenDataHandler) ExportData(c *gin.Context) {
 	dataset := c.Query("dataset")
 	if dataset == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "dataset parameter is required (dorms, rooms, dorm-statistics, application-analytics, amenities-report, occupancy-report, or room-types)"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "dataset parameter is required (dorms, rooms, dorm-statistics, application-list, accepted-applications, amenities-report, occupancy-report, or room-types)"})
 		return
 	}
 
@@ -252,6 +252,28 @@ func (h *OpenDataHandler) GetRoomApplications(c *gin.Context) {
 
 	// Call st_dom_service endpoint
 	applications, err := h.openDataService.GetRoomApplicationsFromStDomService(roomID, authHeader)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": applications,
+	})
+}
+
+// GetApplicationsByAcademicYear proxies the request to st_dom_service to get accepted applications by academic year
+// GET /api/v1/open-data/applications/academic-year
+// This is now a public endpoint (no authentication required)
+func (h *OpenDataHandler) GetApplicationsByAcademicYear(c *gin.Context) {
+	academicYear := c.Query("academic_year")
+	if academicYear == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "academic_year query parameter is required"})
+		return
+	}
+
+	// Call st_dom_service endpoint (no auth required for public data)
+	applications, err := h.openDataService.GetApplicationsByAcademicYearFromStDomService(academicYear)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

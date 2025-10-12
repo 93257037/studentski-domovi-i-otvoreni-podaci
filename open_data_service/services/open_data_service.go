@@ -1063,6 +1063,8 @@ func (s *OpenDataService) ExportData(dataset string, format models.ExportFormat)
 		return s.exportStatistics(ctx, format)
 	case "application-analytics", "application-list": // Support both old and new names
 		return s.exportApplicationAnalytics(ctx, format)
+	case "accepted-applications":
+		return s.exportAcceptedApplications(ctx, format)
 	case "yearly-trends", "godisnja-kretanja":
 		return s.exportYearlyTrends(ctx, format)
 	case "amenities-report":
@@ -1236,6 +1238,133 @@ func (s *OpenDataService) exportYearlyTrends(ctx context.Context, format models.
 			fmt.Sprintf("%.2f", year.AverageGrade),
 			fmt.Sprintf("%d", year.MinGrade),
 			fmt.Sprintf("%d", year.MaxGrade),
+		})
+	}
+
+	return csvData, nil
+}
+
+// exportAcceptedApplications exports all accepted applications (without database IDs, in Serbocroatian)
+func (s *OpenDataService) exportAcceptedApplications(ctx context.Context, format models.ExportFormat) (interface{}, error) {
+	// Get all accepted applications with room and dorm information via aggregation
+	pipeline := mongo.Pipeline{
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "sobas"},
+			{Key: "localField", Value: "soba_id"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "room"},
+		}}},
+		{{Key: "$unwind", Value: bson.D{
+			{Key: "path", Value: "$room"},
+			{Key: "preserveNullAndEmptyArrays", Value: true},
+		}}},
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "st_doms"},
+			{Key: "localField", Value: "room.st_dom_id"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "dorm"},
+		}}},
+		{{Key: "$unwind", Value: bson.D{
+			{Key: "path", Value: "$dorm"},
+			{Key: "preserveNullAndEmptyArrays", Value: true},
+		}}},
+	}
+
+	cursor, err := s.prihvaceneAplikacijeCollection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var results []bson.M
+	if err = cursor.All(ctx, &results); err != nil {
+		return nil, err
+	}
+
+	if format == models.ExportFormatJSON {
+		// Create filtered version without database IDs
+		var filteredApps []map[string]interface{}
+		for _, result := range results {
+			brojIndexa, _ := result["broj_indexa"].(string)
+			prosek := result["prosek"]
+			academicYear, _ := result["academic_year"].(string)
+			createdAt, _ := result["created_at"].(primitive.DateTime)
+			
+			// Get dorm name
+			dormName := "N/A"
+			if dorm, ok := result["dorm"].(bson.M); ok {
+				if ime, ok := dorm["ime"].(string); ok {
+					dormName = ime
+				}
+			}
+			
+			// Convert prosek to float64
+			var prosekFloat float64
+			switch v := prosek.(type) {
+			case float64:
+				prosekFloat = v
+			case float32:
+				prosekFloat = float64(v)
+			case int:
+				prosekFloat = float64(v)
+			case int32:
+				prosekFloat = float64(v)
+			case int64:
+				prosekFloat = float64(v)
+			}
+
+			filteredApps = append(filteredApps, map[string]interface{}{
+				"broj_indexa":    brojIndexa,
+				"prosek":         prosekFloat,
+				"ime_doma":       dormName,
+				"academic_year":  academicYear,
+				"kreirana":       createdAt.Time(),
+			})
+		}
+		return filteredApps, nil
+	}
+
+	// CSV format with Serbocroatian headers (without IDs, without Datum Ažuriranja)
+	var csvData [][]string
+	csvData = append(csvData, []string{"Broj Indexa", "Prosek", "Ime Doma", "Akademska Godina", "Datum Kreiranja"})
+
+	for _, result := range results {
+		brojIndexa, _ := result["broj_indexa"].(string)
+		prosek := result["prosek"]
+		academicYear, _ := result["academic_year"].(string)
+		createdAt, _ := result["created_at"].(primitive.DateTime)
+		
+		// Get dorm name
+		dormName := "N/A"
+		if dorm, ok := result["dorm"].(bson.M); ok {
+			if ime, ok := dorm["ime"].(string); ok {
+				dormName = ime
+			}
+		}
+		
+		// Convert prosek to float64 and format properly
+		var prosekStr string
+		switch v := prosek.(type) {
+		case float64:
+			prosekStr = fmt.Sprintf("%.2f", v)
+		case float32:
+			prosekStr = fmt.Sprintf("%.2f", v)
+		case int:
+			prosekStr = fmt.Sprintf("%.2f", float64(v))
+		case int32:
+			prosekStr = fmt.Sprintf("%.2f", float64(v))
+		case int64:
+			prosekStr = fmt.Sprintf("%.2f", float64(v))
+		default:
+			prosekStr = "0.00"
+		}
+
+		csvData = append(csvData, []string{
+			brojIndexa,
+			prosekStr,
+			dormName,
+			academicYear,
+			createdAt.Time().Format("2006-01-02 15:04:05"),
 		})
 	}
 
@@ -1602,7 +1731,7 @@ func (s *OpenDataService) GetRoomApplicationsFromStDomService(roomID string, aut
 	// Get ST_DOM_SERVICE_URL from environment variable
 	stDomServiceURL := os.Getenv("ST_DOM_SERVICE_URL")
 	if stDomServiceURL == "" {
-		stDomServiceURL = "http://st_dom_service:8082" // default for Docker
+		stDomServiceURL = "http://st_dom_service:8081" // default for Docker
 	}
 
 	// Construct the endpoint URL
@@ -1616,6 +1745,52 @@ func (s *OpenDataService) GetRoomApplicationsFromStDomService(roomID string, aut
 
 	// Set the authorization header
 	req.Header.Set("Authorization", authHeader)
+
+	// Make the request
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call st_dom_service: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Read response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %v", err)
+	}
+
+	// Check status code
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("st_dom_service returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Parse JSON response
+	var result map[string]interface{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %v", err)
+	}
+
+	return result, nil
+}
+
+// GetApplicationsByAcademicYearFromStDomService fetches accepted applications by academic year from st_dom_service
+// Now accessible without authentication for public open data (proxies to st_dom_service)
+func (s *OpenDataService) GetApplicationsByAcademicYearFromStDomService(academicYear string) (interface{}, error) {
+	// Get ST_DOM_SERVICE_URL from environment variable
+	stDomServiceURL := os.Getenv("ST_DOM_SERVICE_URL")
+	if stDomServiceURL == "" {
+		stDomServiceURL = "http://st_dom_service:8081" // default for Docker
+	}
+
+	// Construct the endpoint URL with query parameter
+	url := fmt.Sprintf("%s/api/v1/prihvacene_aplikacije/academic_year?academic_year=%s", stDomServiceURL, academicYear)
+
+	// Create HTTP request (no auth required - public endpoint)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %v", err)
+	}
 
 	// Make the request
 	client := &http.Client{Timeout: 10 * time.Second}

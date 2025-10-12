@@ -7,7 +7,6 @@ import Dashboard from './components/Dashboard';
 import StDomDetail from './components/StDomDetail';
 import RoomDetail from './components/RoomDetail';
 import AdvancedRoomSearch from './components/AdvancedRoomSearch';
-import AcademicYearApplications from './components/AcademicYearApplications';
 import OpenDataDashboard from './components/OpenDataDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
@@ -61,14 +60,6 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <AdvancedRoomSearch />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/academic-year-applications" 
-            element={
-              <ProtectedRoute>
-                <AcademicYearApplications />
               </ProtectedRoute>
             } 
           />

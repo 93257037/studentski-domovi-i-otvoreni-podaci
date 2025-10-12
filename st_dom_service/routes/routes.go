@@ -33,6 +33,12 @@ func SetupRoutes(r *gin.Engine, stDomHandler *handlers.StDomHandler, sobaHandler
 			sobas.GET("/:id", sobaHandler.GetSoba)
 		}
 
+		// Public accepted applications routes (open data)
+		publicPrihvaceneAplikacije := v1.Group("/prihvacene_aplikacije")
+		{
+			publicPrihvaceneAplikacije.GET("/academic_year", prihvacenaAplikacijaHandler.GetPrihvaceneAplikacijeForAcademicYear) // Public: Get by academic year
+		}
+
 		// Inter-service communication endpoint (no auth required for service-to-service calls)
 		interService := v1.Group("/internal")
 		{
@@ -60,7 +66,7 @@ func SetupRoutes(r *gin.Engine, stDomHandler *handlers.StDomHandler, sobaHandler
 				prihvaceneAplikacije.GET("/", prihvacenaAplikacijaHandler.GetAllPrihvaceneAplikacije)                    // Get all accepted applications (available to all authenticated users)
 				prihvaceneAplikacije.GET("/user/:userId", prihvacenaAplikacijaHandler.GetPrihvaceneAplikacijeForUser)    // Get by user (available to all authenticated users)
 				prihvaceneAplikacije.GET("/room/:sobaId", prihvacenaAplikacijaHandler.GetPrihvaceneAplikacijeForRoom)    // Get by room (available to all authenticated users)
-				prihvaceneAplikacije.GET("/academic_year", prihvacenaAplikacijaHandler.GetPrihvaceneAplikacijeForAcademicYear) // Get by academic year (available to all authenticated users)
+				// Note: /academic_year moved to public routes for open data access
 				prihvaceneAplikacije.POST("/checkout", prihvacenaAplikacijaHandler.CheckoutFromRoom)    // User voluntarily leaves room
 			}
 
