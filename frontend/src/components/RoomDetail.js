@@ -56,7 +56,9 @@ const RoomDetail = () => {
     
     try {
       const response = await openDataService.getPrihvaceneAplikacijeForRoom(id, token);
-      setApplications(response.data || []);
+      // The response structure is: { data: { prihvacene_aplikacije: [...], count: N } }
+      const aplikacije = response.data?.prihvacene_aplikacije || [];
+      setApplications(aplikacije);
     } catch (error) {
       setApplicationsError('Greška pri učitavanju aplikacija: ' + error.message);
       console.error('Error fetching room applications:', error);
@@ -183,78 +185,92 @@ const RoomDetail = () => {
           </div>
         )}
 
-        {/* Room Applications Section */}
-        <div className="applications-section">
-          <h2>Prihvaćene aplikacije za ovu sobu</h2>
-          {applicationsLoading ? (
-            <div className="applications-loading">
-              <div className="loading-spinner"></div>
-              <span>Učitavanje aplikacija...</span>
-            </div>
-          ) : applicationsError ? (
-            <div className="applications-error">
-              <p>{applicationsError}</p>
-              <button 
-                onClick={fetchRoomApplications} 
-                className="retry-button"
-              >
-                Pokušaj ponovo
-              </button>
-            </div>
-          ) : applications.length > 0 ? (
-            <div className="applications-list">
-              <p className="applications-count">
-                Ukupno prihvaćenih aplikacija: <strong>{applications.length}</strong>
-              </p>
-              <div className="applications-grid">
-                {applications.map((application, index) => (
-                  <div key={application.id || index} className="application-card">
-                    <div className="application-header">
-                      <h4>Aplikacija #{application.id}</h4>
-                      <span className="academic-year">{application.academic_year}</span>
-                    </div>
-                    <div className="application-details">
-                      <div className="detail-row">
-                        <span className="label">Broj indeksa:</span>
-                        <span className="value">{application.broj_indexa}</span>
-                      </div>
-                      <div className="detail-row">
-                        <span className="label">Prosek:</span>
-                        <span className="value">{application.prosek}</span>
-                      </div>
-                      <div className="detail-row">
-                        <span className="label">Kreirana:</span>
-                        <span className="value">{formatDate(application.created_at)}</span>
-                      </div>
-                      {application.updated_at && (
-                        <div className="detail-row">
-                          <span className="label">Ažurirana:</span>
-                          <span className="value">{formatDate(application.updated_at)}</span>
+        {/* Room Applications Section - only show when authenticated */}
+        {token && (
+          <>
+            <div className="applications-section">
+              <h2>Prihvaćene aplikacije za ovu sobu</h2>
+              {applicationsLoading ? (
+                <div className="applications-loading">
+                  <div className="loading-spinner"></div>
+                  <span>Učitavanje aplikacija...</span>
+                </div>
+              ) : applicationsError ? (
+                <div className="applications-error">
+                  <p>{applicationsError}</p>
+                  <button 
+                    onClick={fetchRoomApplications} 
+                    className="retry-button"
+                  >
+                    Pokušaj ponovo
+                  </button>
+                </div>
+              ) : applications.length > 0 ? (
+                <div className="applications-list">
+                  <p className="applications-count">
+                    Ukupno prihvaćenih aplikacija: <strong>{applications.length}</strong>
+                  </p>
+                  <div className="applications-grid">
+                    {applications.map((application, index) => (
+                      <div key={application.id || index} className="application-card">
+                        <div className="application-header">
+                          <h4>Aplikacija #{application.id}</h4>
+                          <span className="academic-year">{application.academic_year}</span>
                         </div>
-                      )}
-                    </div>
+                        <div className="application-details">
+                          <div className="detail-row">
+                            <span className="label">Broj indeksa:</span>
+                            <span className="value">{application.broj_indexa}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Prosek:</span>
+                            <span className="value">{application.prosek}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">Kreirana:</span>
+                            <span className="value">{formatDate(application.created_at)}</span>
+                          </div>
+                          {application.updated_at && (
+                            <div className="detail-row">
+                              <span className="label">Ažurirana:</span>
+                              <span className="value">{formatDate(application.updated_at)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              ) : (
+                <div className="no-applications">
+                  <p>Trenutno nema prihvaćenih aplikacija za ovu sobu.</p>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="no-applications">
-              <p>Trenutno nema prihvaćenih aplikacija za ovu sobu.</p>
-            </div>
-          )}
-        </div>
 
-        <div className="room-actions">
-          <ApplyToRoomButton 
-            room={room} 
-            stDom={stDom}
-            onSuccess={() => {
-              console.log('Application submitted successfully');
-              // Refresh applications after successful application
-              fetchRoomApplications();
-            }}
-          />
-        </div>
+            <div className="room-actions">
+              <ApplyToRoomButton 
+                room={room} 
+                stDom={stDom}
+                onSuccess={() => {
+                  console.log('Application submitted successfully');
+                  // Refresh applications after successful application
+                  fetchRoomApplications();
+                }}
+              />
+            </div>
+          </>
+        )}
+
+        {/* Show login prompt for unauthenticated users */}
+        {!token && (
+          <div className="login-prompt">
+            <p>Prijavite se da biste primenili za ovu sobu i videli prihvaćene aplikacije.</p>
+            <button onClick={() => navigate('/login')} className="btn btn-primary">
+              Prijavi se
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

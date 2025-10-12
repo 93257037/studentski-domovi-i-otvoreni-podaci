@@ -5,8 +5,11 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
+	"net/http"
 	"open_data_service/models"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -1020,14 +1023,24 @@ func (s *OpenDataService) ExportData(dataset string, format models.ExportFormat)
 		return s.exportDorms(ctx, format)
 	case "rooms":
 		return s.exportRooms(ctx, format)
-	case "statistics":
+	case "statistics", "dorm-statistics": // Support both old and new names
 		return s.exportStatistics(ctx, format)
+	case "application-analytics", "application-list": // Support both old and new names
+		return s.exportApplicationAnalytics(ctx, format)
+	case "yearly-trends", "godisnja-kretanja":
+		return s.exportYearlyTrends(ctx, format)
+	case "amenities-report":
+		return s.exportAmenitiesReport(ctx, format)
+	case "occupancy-report":
+		return s.exportOccupancyReport(ctx, format)
+	case "room-types":
+		return s.exportRoomTypes(ctx, format)
 	default:
 		return nil, fmt.Errorf("unknown dataset: %s", dataset)
 	}
 }
 
-// exportDorms exports dorm data
+// exportDorms exports dorm data (without database IDs, in Serbocroatian)
 func (s *OpenDataService) exportDorms(ctx context.Context, format models.ExportFormat) (interface{}, error) {
 	cursor, err := s.stDomsCollection.Find(ctx, bson.M{})
 	if err != nil {
@@ -1041,21 +1054,39 @@ func (s *OpenDataService) exportDorms(ctx context.Context, format models.ExportF
 	}
 
 	if format == models.ExportFormatJSON {
-		return dorms, nil
+		// Create a custom structure without ID for JSON
+		type DormExport struct {
+			Ime             string    `json:"ime"`
+			Adresa          string    `json:"adresa"`
+			BrojTelefona    string    `json:"broj_telefona"`
+			Email           string    `json:"email"`
+			DatumKreiranja  time.Time `json:"datum_kreiranja"`
+		}
+		
+		var exports []DormExport
+		for _, dorm := range dorms {
+			exports = append(exports, DormExport{
+				Ime:            dorm.Ime,
+				Adresa:         dorm.Address,
+				BrojTelefona:   dorm.TelephoneNumber,
+				Email:          dorm.Email,
+				DatumKreiranja: dorm.CreatedAt,
+			})
+		}
+		return exports, nil
 	}
 
-	// CSV format
+	// CSV format with Serbocroatian headers
 	var csvData [][]string
-	csvData = append(csvData, []string{"ID", "Name", "Address", "Phone", "Email", "Created At"})
+	csvData = append(csvData, []string{"Ime", "Adresa", "Broj Telefona", "Email", "Datum Kreiranja"})
 
 	for _, dorm := range dorms {
 		csvData = append(csvData, []string{
-			dorm.ID.Hex(),
 			dorm.Ime,
 			dorm.Address,
 			dorm.TelephoneNumber,
 			dorm.Email,
-			dorm.CreatedAt.Format(time.RFC3339),
+			dorm.CreatedAt.Format("2006-01-02 15:04:05"),
 		})
 	}
 
@@ -1071,30 +1102,47 @@ func (s *OpenDataService) exportRooms(ctx context.Context, format models.ExportF
 	}
 
 	if format == models.ExportFormatJSON {
-		return rooms, nil
+		// Create a filtered version without room_id and dorm_id
+		var filteredRooms []map[string]interface{}
+		for _, room := range rooms {
+			filteredRooms = append(filteredRooms, map[string]interface{}{
+				"dorm_name":        room.DormName,
+				"dorm_address":     room.DormAddress,
+				"capacity":         room.Capacity,
+				"occupied":         room.Occupied,
+				"available_spots":  room.AvailableSpots,
+				"amenities":        room.Amenities,
+				"is_available":     room.IsAvailable,
+			})
+		}
+		return filteredRooms, nil
 	}
 
-	// CSV format
+	// CSV format with Serbocroatian headers (without IDs)
 	var csvData [][]string
-	csvData = append(csvData, []string{"Room ID", "Dorm ID", "Dorm Name", "Capacity", "Occupied", "Available", "Amenities", "Is Available"})
+	csvData = append(csvData, []string{"Ime Doma", "Adresa", "Kapacitet", "Popunjeno", "Slobodno", "Pogodnosti", "Dostupna"})
 
 	for _, room := range rooms {
+		availableStr := "Ne"
+		if room.IsAvailable {
+			availableStr = "Da"
+		}
+		
 		csvData = append(csvData, []string{
-			room.RoomID.Hex(),
-			room.DormID.Hex(),
 			room.DormName,
+			room.DormAddress,
 			fmt.Sprintf("%d", room.Capacity),
 			fmt.Sprintf("%d", room.Occupied),
 			fmt.Sprintf("%d", room.AvailableSpots),
-			strings.Join(room.Amenities, ";"),
-			fmt.Sprintf("%t", room.IsAvailable),
+			strings.Join(room.Amenities, ", "),
+			availableStr,
 		})
 	}
 
 	return csvData, nil
 }
 
-// exportStatistics exports statistical data
+// exportStatistics exports statistical data (now called dorm-statistics)
 func (s *OpenDataService) exportStatistics(ctx context.Context, format models.ExportFormat) (interface{}, error) {
 	stats, err := s.GetPublicStatistics()
 	if err != nil {
@@ -1105,9 +1153,9 @@ func (s *OpenDataService) exportStatistics(ctx context.Context, format models.Ex
 		return stats, nil
 	}
 
-	// CSV format - export dorm statistics
+	// CSV format - export dorm statistics with Serbocroatian headers
 	var csvData [][]string
-	csvData = append(csvData, []string{"Dorm Name", "Address", "Total Rooms", "Total Capacity", "Occupied", "Available", "Occupancy Rate"})
+	csvData = append(csvData, []string{"Ime Doma", "Adresa", "Ukupno Soba", "Ukupan Kapacitet", "Popunjeno", "Dostupno", "Stopa Popunjenosti (%)"})
 
 	for _, dormStat := range stats.DormStatistics {
 		csvData = append(csvData, []string{
@@ -1118,6 +1166,373 @@ func (s *OpenDataService) exportStatistics(ctx context.Context, format models.Ex
 			fmt.Sprintf("%d", dormStat.OccupiedSpots),
 			fmt.Sprintf("%d", dormStat.AvailableSpots),
 			fmt.Sprintf("%.2f", dormStat.OccupancyRate),
+		})
+	}
+
+	return csvData, nil
+}
+
+// exportYearlyTrends exports yearly trends data
+func (s *OpenDataService) exportYearlyTrends(ctx context.Context, format models.ExportFormat) (interface{}, error) {
+	trends, err := s.GetApplicationTrends()
+	if err != nil {
+		return nil, err
+	}
+
+	if format == models.ExportFormatJSON {
+		return map[string]interface{}{
+			"godisnji_kretanja": trends.YearlyTrends,
+			"generisano":        time.Now(),
+		}, nil
+	}
+
+	// CSV format with Serbocroatian headers
+	var csvData [][]string
+	csvData = append(csvData, []string{"Školska Godina", "Prijave", "Prihvaćeno", "Stopa Prihvatanja (%)", "Prosečan Prosek", "Min. Prosek", "Maks. Prosek"})
+
+	for _, year := range trends.YearlyTrends {
+		csvData = append(csvData, []string{
+			year.AcademicYear,
+			fmt.Sprintf("%d", year.TotalApplications),
+			fmt.Sprintf("%d", year.AcceptedApplications),
+			fmt.Sprintf("%.2f", year.AcceptanceRate),
+			fmt.Sprintf("%.2f", year.AverageGrade),
+			fmt.Sprintf("%d", year.MinGrade),
+			fmt.Sprintf("%d", year.MaxGrade),
+		})
+	}
+
+	return csvData, nil
+}
+
+// exportApplicationAnalytics exports detailed application list
+// Note: "Aktivna" field means whether the application is still pending (true) or has been processed/closed (false)
+func (s *OpenDataService) exportApplicationAnalytics(ctx context.Context, format models.ExportFormat) (interface{}, error) {
+	// Get all applications with room and dorm information
+	pipeline := mongo.Pipeline{
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "sobas"},
+			{Key: "localField", Value: "soba_id"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "room"},
+		}}},
+		{{Key: "$unwind", Value: bson.D{
+			{Key: "path", Value: "$room"},
+			{Key: "preserveNullAndEmptyArrays", Value: true},
+		}}},
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "st_doms"},
+			{Key: "localField", Value: "room.st_dom_id"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "dorm"},
+		}}},
+		{{Key: "$unwind", Value: bson.D{
+			{Key: "path", Value: "$dorm"},
+			{Key: "preserveNullAndEmptyArrays", Value: true},
+		}}},
+	}
+
+	cursor, err := s.aplikacijeCollection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	type ApplicationAnalytic struct {
+		BrojIndexa   string    `bson:"broj_indexa" json:"broj_indexa"`
+		DormName     string    `json:"ime_doma"`
+		RoomCapacity int       `json:"kapacitet_sobe"`
+		Grade        int       `bson:"prosek" json:"prosek"`
+		IsActive     bool      `bson:"is_active" json:"aktivna"`
+		CreatedAt    time.Time `bson:"created_at" json:"datum_kreiranja"`
+	}
+
+	var results []struct {
+		BrojIndexa   string                 `bson:"broj_indexa"`
+		Grade        int                    `bson:"prosek"`
+		IsActive     bool                   `bson:"is_active"`
+		CreatedAt    time.Time              `bson:"created_at"`
+		Room         map[string]interface{} `bson:"room"`
+		Dorm         map[string]interface{} `bson:"dorm"`
+	}
+	
+	if err = cursor.All(ctx, &results); err != nil {
+		return nil, err
+	}
+
+	var analytics []ApplicationAnalytic
+	for _, result := range results {
+		analytic := ApplicationAnalytic{
+			BrojIndexa: result.BrojIndexa,
+			Grade:      result.Grade,
+			IsActive:   result.IsActive,
+			CreatedAt:  result.CreatedAt,
+		}
+
+		// Extract dorm name from nested document
+		if result.Dorm != nil {
+			if dormName, ok := result.Dorm["ime"].(string); ok {
+				analytic.DormName = dormName
+			}
+		}
+
+		// Extract room capacity from nested document
+		if result.Room != nil {
+			if krevetnost, ok := result.Room["krevetnost"].(int32); ok {
+				analytic.RoomCapacity = int(krevetnost)
+			} else if krevetnost, ok := result.Room["krevetnost"].(int64); ok {
+				analytic.RoomCapacity = int(krevetnost)
+			} else if krevetnost, ok := result.Room["krevetnost"].(int); ok {
+				analytic.RoomCapacity = krevetnost
+			}
+		}
+
+		analytics = append(analytics, analytic)
+	}
+
+	if format == models.ExportFormatJSON {
+		return analytics, nil
+	}
+
+	// CSV format
+	var csvData [][]string
+	csvData = append(csvData, []string{"Broj Indexa", "Ime Doma", "Kapacitet Sobe", "Prosek", "Aktivna (da/ne)", "Datum Kreiranja"})
+
+	for _, app := range analytics {
+		isActiveStr := "ne"
+		if app.IsActive {
+			isActiveStr = "da"
+		}
+		
+		csvData = append(csvData, []string{
+			app.BrojIndexa,
+			app.DormName,
+			fmt.Sprintf("%d", app.RoomCapacity),
+			fmt.Sprintf("%d", app.Grade),
+			isActiveStr,
+			app.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+
+	return csvData, nil
+}
+
+// exportAmenitiesReport exports amenities distribution report
+func (s *OpenDataService) exportAmenitiesReport(ctx context.Context, format models.ExportFormat) (interface{}, error) {
+	stats, err := s.GetPublicStatistics()
+	if err != nil {
+		return nil, err
+	}
+
+	type AmenityReport struct {
+		Amenity      string `json:"amenity"`
+		TotalRooms   int    `json:"total_rooms"`
+		Percentage   float64 `json:"percentage"`
+	}
+
+	var amenityReports []AmenityReport
+	totalRooms := stats.TotalRooms
+
+	for amenity, count := range stats.AmenitiesDistribution {
+		percentage := 0.0
+		if totalRooms > 0 {
+			percentage = float64(count) / float64(totalRooms) * 100
+			percentage = math.Round(percentage*100) / 100
+		}
+
+		amenityReports = append(amenityReports, AmenityReport{
+			Amenity:    amenity,
+			TotalRooms: count,
+			Percentage: percentage,
+		})
+	}
+
+	// Sort by total rooms descending
+	sort.Slice(amenityReports, func(i, j int) bool {
+		return amenityReports[i].TotalRooms > amenityReports[j].TotalRooms
+	})
+
+	if format == models.ExportFormatJSON {
+		return map[string]interface{}{
+			"amenities":   amenityReports,
+			"total_rooms": totalRooms,
+			"generated_at": time.Now(),
+		}, nil
+	}
+
+	// CSV format
+	var csvData [][]string
+	csvData = append(csvData, []string{"Amenity", "Rooms with Amenity", "Percentage of Total Rooms"})
+
+	for _, report := range amenityReports {
+		csvData = append(csvData, []string{
+			report.Amenity,
+			fmt.Sprintf("%d", report.TotalRooms),
+			fmt.Sprintf("%.2f%%", report.Percentage),
+		})
+	}
+
+	return csvData, nil
+}
+
+// exportOccupancyReport exports detailed occupancy analysis
+func (s *OpenDataService) exportOccupancyReport(ctx context.Context, format models.ExportFormat) (interface{}, error) {
+	heatmap, err := s.GetOccupancyHeatmap()
+	if err != nil {
+		return nil, err
+	}
+
+	type OccupancyDetail struct {
+		DormID          string  `json:"dorm_id"`
+		DormName        string  `json:"dorm_name"`
+		Address         string  `json:"address"`
+		TotalCapacity   int     `json:"total_capacity"`
+		OccupiedSpots   int     `json:"occupied_spots"`
+		AvailableSpots  int     `json:"available_spots"`
+		OccupancyRate   float64 `json:"occupancy_rate"`
+		Status          string  `json:"status"`
+	}
+
+	var occupancyDetails []OccupancyDetail
+
+	for _, dorm := range heatmap.Dorms {
+		occupancyDetails = append(occupancyDetails, OccupancyDetail{
+			DormID:         dorm.DormID.Hex(),
+			DormName:       dorm.DormName,
+			Address:        dorm.Address,
+			TotalCapacity:  dorm.TotalCapacity,
+			OccupiedSpots:  dorm.OccupiedSpots,
+			AvailableSpots: dorm.AvailableSpots,
+			OccupancyRate:  dorm.OccupancyRate,
+			Status:         dorm.Status,
+		})
+	}
+
+	if format == models.ExportFormatJSON {
+		return map[string]interface{}{
+			"dorms":      occupancyDetails,
+			"summary":    heatmap.Summary,
+			"generated_at": time.Now(),
+		}, nil
+	}
+
+	// CSV format
+	var csvData [][]string
+	csvData = append(csvData, []string{"Dorm ID", "Dorm Name", "Address", "Total Capacity", "Occupied", "Available", "Occupancy Rate", "Status"})
+
+	for _, detail := range occupancyDetails {
+		csvData = append(csvData, []string{
+			detail.DormID,
+			detail.DormName,
+			detail.Address,
+			fmt.Sprintf("%d", detail.TotalCapacity),
+			fmt.Sprintf("%d", detail.OccupiedSpots),
+			fmt.Sprintf("%d", detail.AvailableSpots),
+			fmt.Sprintf("%.2f%%", detail.OccupancyRate),
+			detail.Status,
+		})
+	}
+
+	return csvData, nil
+}
+
+// exportRoomTypes exports room types and availability breakdown
+func (s *OpenDataService) exportRoomTypes(ctx context.Context, format models.ExportFormat) (interface{}, error) {
+	stats, err := s.GetPublicStatistics()
+	if err != nil {
+		return nil, err
+	}
+
+	type RoomTypeDetail struct {
+		Capacity          int     `json:"kapacitet"`
+		TotalRooms        int     `json:"ukupno_soba"`
+		TotalCapacity     int     `json:"ukupan_kapacitet"`
+		OccupiedSpots     int     `json:"popunjeno_mesta"`
+		AvailableSpots    int     `json:"dostupno_mesta"`
+		OccupancyRate     float64 `json:"stopa_popunjenosti"`
+	}
+
+	var roomTypeDetails []RoomTypeDetail
+
+	// Get room type statistics with occupancy
+	for capacity, roomCount := range stats.RoomTypeDistribution {
+		totalCap := capacity * roomCount
+
+		// Count occupied spots for this room type
+		pipeline := mongo.Pipeline{
+			{{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "sobas"},
+				{Key: "localField", Value: "soba_id"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "room"},
+			}}},
+			{{Key: "$unwind", Value: "$room"}},
+			{{Key: "$match", Value: bson.D{
+				{Key: "room.krevetnost", Value: capacity},
+			}}},
+			{{Key: "$count", Value: "total"}},
+		}
+
+		cursor, err := s.prihvaceneAplikacijeCollection.Aggregate(ctx, pipeline)
+		if err != nil {
+			return nil, err
+		}
+
+		var result []struct {
+			Total int `bson:"total"`
+		}
+		if err = cursor.All(ctx, &result); err != nil {
+			cursor.Close(ctx)
+			return nil, err
+		}
+		cursor.Close(ctx)
+
+		occupied := 0
+		if len(result) > 0 {
+			occupied = result[0].Total
+		}
+
+		available := totalCap - occupied
+		occupancyRate := 0.0
+		if totalCap > 0 {
+			occupancyRate = float64(occupied) / float64(totalCap) * 100
+			occupancyRate = math.Round(occupancyRate*100) / 100
+		}
+
+		roomTypeDetails = append(roomTypeDetails, RoomTypeDetail{
+			Capacity:       capacity,
+			TotalRooms:     roomCount,
+			TotalCapacity:  totalCap,
+			OccupiedSpots:  occupied,
+			AvailableSpots: available,
+			OccupancyRate:  occupancyRate,
+		})
+	}
+
+	// Sort by capacity
+	sort.Slice(roomTypeDetails, func(i, j int) bool {
+		return roomTypeDetails[i].Capacity < roomTypeDetails[j].Capacity
+	})
+
+	if format == models.ExportFormatJSON {
+		return map[string]interface{}{
+			"tipovi_soba":  roomTypeDetails,
+			"generisano": time.Now(),
+		}, nil
+	}
+
+	// CSV format with Serbocroatian headers
+	var csvData [][]string
+	csvData = append(csvData, []string{"Kapacitet Sobe", "Ukupno Soba", "Ukupan Kapacitet", "Popunjeno Mesta", "Dostupno Mesta", "Stopa Popunjenosti (%)"})
+
+	for _, detail := range roomTypeDetails {
+		csvData = append(csvData, []string{
+			fmt.Sprintf("Soba za %d osoba", detail.Capacity),
+			fmt.Sprintf("%d", detail.TotalRooms),
+			fmt.Sprintf("%d", detail.TotalCapacity),
+			fmt.Sprintf("%d", detail.OccupiedSpots),
+			fmt.Sprintf("%d", detail.AvailableSpots),
+			fmt.Sprintf("%.2f", detail.OccupancyRate),
 		})
 	}
 
@@ -1139,6 +1554,58 @@ func FormatCSV(data [][]string) (string, error) {
 	}
 
 	return builder.String(), nil
+}
+
+// ====================
+// Helper Functions
+// ====================
+
+// GetRoomApplicationsFromStDomService fetches accepted applications for a room from st_dom_service
+func (s *OpenDataService) GetRoomApplicationsFromStDomService(roomID string, authHeader string) (interface{}, error) {
+	// Get ST_DOM_SERVICE_URL from environment variable
+	stDomServiceURL := os.Getenv("ST_DOM_SERVICE_URL")
+	if stDomServiceURL == "" {
+		stDomServiceURL = "http://st_dom_service:8082" // default for Docker
+	}
+
+	// Construct the endpoint URL
+	url := fmt.Sprintf("%s/api/v1/prihvacene_aplikacije/room/%s", stDomServiceURL, roomID)
+
+	// Create HTTP request
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %v", err)
+	}
+
+	// Set the authorization header
+	req.Header.Set("Authorization", authHeader)
+
+	// Make the request
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call st_dom_service: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Read response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %v", err)
+	}
+
+	// Check status code
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("st_dom_service returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Parse JSON response
+	var result map[string]interface{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %v", err)
+	}
+
+	return result, nil
 }
 
 // FormatJSON formats data to JSON string

@@ -202,6 +202,21 @@ class OpenDataService {
     return this.makeRequest('/open-data/amenities');
   }
 
+  /**
+   * Get accepted applications for a specific room
+   * This proxies the request through open_data_service to st_dom_service
+   * @param {string} roomId - The room ID
+   * @param {string} token - Authentication token
+   * @returns {Promise} List of accepted applications for the room
+   */
+  async getPrihvaceneAplikacijeForRoom(roomId, token) {
+    return this.makeRequest(`/open-data/rooms/${roomId}/applications`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  }
+
   // ====================
   // Legacy/Backward Compatibility Methods
   // ====================

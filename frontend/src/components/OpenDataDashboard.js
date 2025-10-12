@@ -25,15 +25,13 @@ const OpenDataDashboard = () => {
   const [roomResults, setRoomResults] = useState([]);
   const [availableAmenities, setAvailableAmenities] = useState([]);
 
-  // Tab 3: Dorm Comparison
+  // Dorm list for filters
   const [dormList, setDormList] = useState([]);
-  const [selectedDorms, setSelectedDorms] = useState([]);
-  const [comparisonData, setComparisonData] = useState(null);
 
-  // Tab 4: Application Trends
+  // Application Trends
   const [trendsData, setTrendsData] = useState(null);
 
-  // Tab 5: Occupancy Heatmap
+  // Occupancy Heatmap
   const [heatmapData, setHeatmapData] = useState(null);
 
   // Load initial data
@@ -43,7 +41,7 @@ const OpenDataDashboard = () => {
 
   const loadInitialData = async () => {
     try {
-      // Load dorm list for comparison
+      // Load dorm list for filters
       const dormsResponse = await openDataService.getDormList();
       setDormList(dormsResponse.dorms || []);
 
@@ -120,38 +118,6 @@ const OpenDataDashboard = () => {
         ? prev.amenities.filter(a => a !== amenity)
         : [...prev.amenities, amenity]
     }));
-  };
-
-  // Dorm Comparison handlers
-  const toggleDormSelection = (dormId) => {
-    setSelectedDorms(prev => {
-      if (prev.includes(dormId)) {
-        return prev.filter(id => id !== dormId);
-      } else if (prev.length < 10) {
-        return [...prev, dormId];
-      } else {
-        alert('Maximum 10 dorms can be compared at once');
-        return prev;
-      }
-    });
-  };
-
-  const handleCompareDorms = async () => {
-    if (selectedDorms.length === 0) {
-      alert('Please select at least one dorm to compare');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-    try {
-      const data = await openDataService.compareDorms(selectedDorms);
-      setComparisonData(data.comparison);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
   };
 
   // Export handlers
@@ -260,11 +226,17 @@ const OpenDataDashboard = () => {
         <div className="export-section">
           <h3>Izvoz Podataka</h3>
           <div className="export-buttons">
-            <button onClick={() => handleExport('statistics', 'json')} className="btn btn-secondary">
-              Izvezi kao JSON
+            <button onClick={() => handleExport('dorm-statistics', 'json')} className="btn btn-secondary">
+              Izvezi Statistiku Domova (JSON)
             </button>
-            <button onClick={() => handleExport('statistics', 'csv')} className="btn btn-secondary">
-              Izvezi kao CSV
+            <button onClick={() => handleExport('dorm-statistics', 'csv')} className="btn btn-secondary">
+              Izvezi Statistiku Domova (CSV)
+            </button>
+            <button onClick={() => handleExport('dorms', 'json')} className="btn btn-secondary">
+              Izvezi Listu Domova (JSON)
+            </button>
+            <button onClick={() => handleExport('dorms', 'csv')} className="btn btn-secondary">
+              Izvezi Listu Domova (CSV)
             </button>
           </div>
         </div>
@@ -345,6 +317,18 @@ const OpenDataDashboard = () => {
           {loading ? 'Pretraga...' : 'Pretraži Sobe'}
         </button>
 
+        <div className="export-section" style={{ marginTop: '20px' }}>
+          <h3>Izvoz Svih Soba</h3>
+          <div className="export-buttons">
+            <button onClick={() => handleExport('rooms', 'json')} className="btn btn-secondary">
+              Izvezi kao JSON
+            </button>
+            <button onClick={() => handleExport('rooms', 'csv')} className="btn btn-secondary">
+              Izvezi kao CSV
+            </button>
+          </div>
+        </div>
+
         {roomResults.length > 0 && (
           <div className="results-section">
             <h3>Rezultati ({roomResults.length} soba)</h3>
@@ -363,7 +347,12 @@ const OpenDataDashboard = () => {
                 </thead>
                 <tbody>
                   {roomResults.map(room => (
-                    <tr key={room.room_id}>
+                    <tr 
+                      key={room.room_id} 
+                      onClick={() => navigate(`/room/${room.room_id}`)}
+                      style={{ cursor: 'pointer' }}
+                      className="clickable-row"
+                    >
                       <td>{room.dorm_name}</td>
                       <td>{room.dorm_address}</td>
                       <td>{room.capacity}</td>
@@ -386,112 +375,15 @@ const OpenDataDashboard = () => {
     );
   };
 
-  const renderDormComparison = () => {
-    return (
-      <div className="dorm-comparison-container">
-        <h2>Alatka za Poređenje Domova</h2>
-        
-        <div className="dorm-selection">
-          <h3>Izaberite Domove za Poređenje (maks. 10)</h3>
-          <p className="selection-count">Izabrano: {selectedDorms.length}</p>
-          <div className="dorm-checkboxes">
-            {dormList.map(dorm => (
-              <label key={dorm.id} className="dorm-checkbox">
-                <input
-                  type="checkbox"
-                  checked={selectedDorms.includes(dorm.id)}
-                  onChange={() => toggleDormSelection(dorm.id)}
-                  disabled={!selectedDorms.includes(dorm.id) && selectedDorms.length >= 10}
-                />
-                <span>{dorm.name}</span>
-                <small>{dorm.address}</small>
-              </label>
-            ))}
-          </div>
-          <button onClick={handleCompareDorms} className="btn btn-primary" disabled={loading || selectedDorms.length === 0}>
-            {loading ? 'Poređenje...' : 'Uporedi Izabrane Domove'}
-          </button>
-        </div>
-
-        {comparisonData && (
-          <div className="comparison-results">
-            <h3>Rezultati Poređenja</h3>
-            <div className="comparison-grid">
-              {comparisonData.dorms.map(dorm => (
-                <div key={dorm.dorm_id} className="comparison-card">
-                  <h4>{dorm.dorm_name}</h4>
-                  <p className="address">{dorm.address}</p>
-                  
-                  <div className="contact-info">
-                    <p><strong>Telefon:</strong> {dorm.contact_info.phone}</p>
-                    <p><strong>Email:</strong> {dorm.contact_info.email}</p>
-                  </div>
-
-                  <div className="capacity-info">
-                    <h5>Kapacitet</h5>
-                    <p>Sobe: {dorm.capacity.total_rooms}</p>
-                    <p>Ukupan Kapacitet: {dorm.capacity.total_capacity}</p>
-                    <p>Popunjeno: {dorm.capacity.occupied_spots}</p>
-                    <p>Dostupno: {dorm.capacity.available_spots}</p>
-                    <p className="occupancy">
-                      Popunjenost: <strong>{dorm.capacity.occupancy_rate.toFixed(1)}%</strong>
-                    </p>
-                  </div>
-
-                  <div className="application-info">
-                    <h5>Prijave</h5>
-                    <p>Ukupno: {dorm.application_metrics.total_applications}</p>
-                    <p>Prihvaćeno: {dorm.application_metrics.accepted_applications}</p>
-                    <p>Stopa Prihvatanja: {dorm.application_metrics.acceptance_rate.toFixed(1)}%</p>
-                    <p>Prosečan Prosek: {dorm.application_metrics.average_grade.toFixed(2)}</p>
-                  </div>
-
-                  <div className="amenities-info">
-                    <h5>Pogodnosti</h5>
-                    {Object.entries(dorm.amenities_offered).map(([amenity, count]) => (
-                      <p key={amenity}>{amenity}: {count} soba</p>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   const renderTrends = () => {
     if (!trendsData) return null;
 
     return (
       <div className="trends-container">
-        <h2>Analiza Trendova Prijava</h2>
-
-        <div className="trends-overview">
-          <h3>Ukupna Statistika</h3>
-          <div className="stats-grid">
-            <div className="stat-card">
-              <h3>{trendsData.overall_metrics?.total_years || 0}</h3>
-              <p>Praćenih Godina</p>
-            </div>
-            <div className="stat-card">
-              <h3>{trendsData.overall_metrics?.average_applications_per_year || 0}</h3>
-              <p>Prosečno Prijava/Godinu</p>
-            </div>
-            <div className="stat-card">
-              <h3 className={`trend-${trendsData.overall_metrics?.trend_direction || 'stable'}`}>
-                {trendsData.overall_metrics?.trend_direction === 'increasing' ? 'Raste' : 
-                 trendsData.overall_metrics?.trend_direction === 'decreasing' ? 'Opada' :
-                 trendsData.overall_metrics?.trend_direction === 'stable' ? 'Stabilno' : 'N/A'}
-              </h3>
-              <p>Pravac Trenda</p>
-            </div>
-          </div>
-        </div>
+        <h2>Analiza Kretanja Prijava</h2>
 
         <div className="yearly-trends">
-          <h3>Godišnji Trendovi</h3>
+          <h3>Godišnja Kretanja</h3>
           <div className="table-container">
             <table className="trends-table">
               <thead>
@@ -521,17 +413,29 @@ const OpenDataDashboard = () => {
                 ) : (
                   <tr>
                     <td colSpan="7" style={{textAlign: 'center', padding: '20px'}}>
-                      Nema dostupnih podataka o trendovima
+                      Nema dostupnih podataka o kretanjima
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
+
+          <div className="export-section">
+            <h3>Izvoz Podataka</h3>
+            <div className="export-buttons">
+              <button onClick={() => handleExport('godisnja-kretanja', 'json')} className="btn btn-secondary">
+                Izvezi Godišnja Kretanja (JSON)
+              </button>
+              <button onClick={() => handleExport('godisnja-kretanja', 'csv')} className="btn btn-secondary">
+                Izvezi Godišnja Kretanja (CSV)
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="dorm-trends">
-          <h3>Trendovi Prijava po Domovima</h3>
+          <h3>Kretanja Prijava po Domovima</h3>
           <div className="table-container">
             <table className="trends-table">
               <thead>
@@ -557,12 +461,24 @@ const OpenDataDashboard = () => {
                 ) : (
                   <tr>
                     <td colSpan="4" style={{textAlign: 'center', padding: '20px'}}>
-                      Nema dostupnih podataka o trendovima domova
+                      Nema dostupnih podataka o kretanjima domova
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
+          </div>
+
+          <div className="export-section">
+            <h3>Izvoz Podataka</h3>
+            <div className="export-buttons">
+              <button onClick={() => handleExport('application-list', 'json')} className="btn btn-secondary">
+                Izvezi Listu Prijava (JSON)
+              </button>
+              <button onClick={() => handleExport('application-list', 'csv')} className="btn btn-secondary">
+                Izvezi Listu Prijava (CSV)
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -574,33 +490,7 @@ const OpenDataDashboard = () => {
 
     return (
       <div className="heatmap-container">
-        <h2>Mapa Popunjenosti u Realnom Vremenu</h2>
-
-        <div className="heatmap-summary">
-          <h3>Pregled</h3>
-          <div className="stats-grid">
-            <div className="stat-card">
-              <h3>{heatmapData.summary.average_occupancy.toFixed(1)}%</h3>
-              <p>Prosečna Popunjenost</p>
-            </div>
-            <div className="stat-card">
-              <h3>{heatmapData.summary.highest_occupancy.toFixed(1)}%</h3>
-              <p>Najveća Popunjenost</p>
-            </div>
-            <div className="stat-card">
-              <h3>{heatmapData.summary.lowest_occupancy.toFixed(1)}%</h3>
-              <p>Najniža Popunjenost</p>
-            </div>
-            <div className="stat-card">
-              <h3>{heatmapData.summary.full_dorms}</h3>
-              <p>Popunjenih Domova</p>
-            </div>
-            <div className="stat-card">
-              <h3>{heatmapData.summary.empty_dorms}</h3>
-              <p>Praznih Domova</p>
-            </div>
-          </div>
-        </div>
+        <h2>Karta Popunjenosti u Realnom Vremenu</h2>
 
         <div className="heatmap-grid">
           {heatmapData.dorms
@@ -630,6 +520,18 @@ const OpenDataDashboard = () => {
                 </span>
               </div>
             ))}
+        </div>
+
+        <div className="export-section">
+          <h3>Izvoz Podataka</h3>
+          <div className="export-buttons">
+            <button onClick={() => handleExport('room-types', 'json')} className="btn btn-secondary">
+              Izvezi Tipove Soba (JSON)
+            </button>
+            <button onClick={() => handleExport('room-types', 'csv')} className="btn btn-secondary">
+              Izvezi Tipove Soba (CSV)
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -669,22 +571,16 @@ const OpenDataDashboard = () => {
           🔍 Pretraga Soba
         </button>
         <button
-          className={activeTab === 'comparison' ? 'active' : ''}
-          onClick={() => setActiveTab('comparison')}
-        >
-          ⚖️ Uporedi Domove
-        </button>
-        <button
           className={activeTab === 'trends' ? 'active' : ''}
           onClick={() => setActiveTab('trends')}
         >
-          📊 Trendovi
+          📊 Kretanja
         </button>
         <button
           className={activeTab === 'heatmap' ? 'active' : ''}
           onClick={() => setActiveTab('heatmap')}
         >
-          🗺️ Mapa Popunjenosti
+          🗺️ Karta Popunjenosti
         </button>
       </nav>
 
@@ -696,7 +592,6 @@ const OpenDataDashboard = () => {
           <>
             {activeTab === 'statistics' && renderStatistics()}
             {activeTab === 'rooms' && renderRoomSearch()}
-            {activeTab === 'comparison' && renderDormComparison()}
             {activeTab === 'trends' && renderTrends()}
             {activeTab === 'heatmap' && renderHeatmap()}
           </>

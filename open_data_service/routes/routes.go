@@ -30,18 +30,21 @@ func SetupRoutes(
 
 			// 2. Room Availability Search
 			openData.GET("/rooms/search", openDataHandler.SearchAvailableRooms)
+			
+			// 3. Room Applications (proxies to st_dom_service)
+			openData.GET("/rooms/:roomId/applications", openDataHandler.GetRoomApplications)
 
-			// 3. Dorm Comparison Tool
+			// 4. Dorm Comparison Tool
 			openData.GET("/dorms/compare", openDataHandler.CompareDorms)
 			openData.GET("/dorms/list", openDataHandler.GetDormList)
 
-			// 4. Application Trends Analysis
+			// 5. Application Trends Analysis
 			openData.GET("/trends/applications", openDataHandler.GetApplicationTrends)
 
-			// 5. Real-time Occupancy Heatmap
+			// 6. Real-time Occupancy Heatmap
 			openData.GET("/occupancy/heatmap", openDataHandler.GetOccupancyHeatmap)
 
-			// 6. Open Data Export (CSV/JSON)
+			// 7. Open Data Export (CSV/JSON)
 			openData.GET("/export", openDataHandler.ExportData)
 
 			// Helper endpoints

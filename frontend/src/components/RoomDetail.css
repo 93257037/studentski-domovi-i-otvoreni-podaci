@@ -1,3 +1,41 @@
+/* Login prompt for unauthenticated users */
+.login-prompt {
+  margin-top: 30px;
+  padding: 30px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  text-align: center;
+  color: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.login-prompt p {
+  margin: 0 0 20px 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.login-prompt .btn {
+  background: white;
+  color: #667eea;
+  font-weight: 600;
+  padding: 12px 30px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.login-prompt .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.login-prompt .btn:active {
+  transform: translateY(0);
+}
+
 .room-detail-container {
   max-width: 1200px;
   margin: 0 auto;
@@ -22,9 +60,9 @@
   font-weight: 600;
 }
 
-.back-button {
-  background: #6c757d;
-  color: white;
+.room-detail-header .back-button {
+  background: #667eea !important;
+  color: white !important;
   border: none;
   padding: 10px 20px;
   border-radius: 8px;
@@ -35,11 +73,13 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.back-button:hover {
-  background: #5a6268;
+.room-detail-header .back-button:hover {
+  background: #5568d3 !important;
   transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .room-detail-content {
@@ -53,41 +93,36 @@
   background: white;
   border-radius: 12px;
   padding: 30px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e9ecef;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
 .room-info-section h2,
 .dormitory-info-section h2 {
-  margin: 0 0 20px 0;
+  margin: 0 0 25px 0;
   color: #2c3e50;
   font-size: 1.8rem;
   font-weight: 600;
-  border-bottom: 3px solid #3498db;
+  border-bottom: 3px solid #667eea;
   padding-bottom: 10px;
 }
 
 .room-info-grid,
 .dormitory-info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 20px;
 }
 
 .info-item {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 15px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border-left: 4px solid #3498db;
+  gap: 5px;
 }
 
 .info-label {
-  font-weight: 600;
-  color: #495057;
+  color: #6c757d;
   font-size: 0.9rem;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -95,20 +130,18 @@
 .info-value {
   color: #2c3e50;
   font-size: 1.1rem;
-  font-weight: 500;
-  word-break: break-word;
+  font-weight: 600;
 }
 
 .applications-section {
   background: white;
   border-radius: 12px;
   padding: 30px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e9ecef;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
 .applications-section h2 {
-  margin: 0 0 20px 0;
+  margin: 0 0 25px 0;
   color: #2c3e50;
   font-size: 1.8rem;
   font-weight: 600;
@@ -118,19 +151,18 @@
 
 .applications-loading {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: 15px;
   padding: 40px;
   color: #6c757d;
-  font-size: 1.1rem;
 }
 
 .loading-spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid #f3f3f3;
-  border-top: 2px solid #28a745;
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #667eea;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -141,63 +173,59 @@
 }
 
 .applications-error {
-  text-align: center;
-  padding: 30px;
-  color: #dc3545;
-  background: #f8d7da;
+  padding: 20px;
+  background-color: #f8d7da;
   border: 1px solid #f5c6cb;
   border-radius: 8px;
-  margin: 20px 0;
+  color: #721c24;
+  text-align: center;
 }
 
-.applications-error p {
-  margin: 0 0 15px 0;
-  font-size: 1.1rem;
-}
-
-.retry-button {
+.applications-error button {
+  margin-top: 15px;
   background: #dc3545;
   color: white;
   border: none;
   padding: 10px 20px;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 1rem;
-  transition: background-color 0.3s ease;
+  font-weight: 500;
+  transition: background 0.3s ease;
 }
 
-.retry-button:hover {
+.applications-error button:hover {
   background: #c82333;
 }
 
 .applications-count {
-  margin: 0 0 20px 0;
+  margin-bottom: 20px;
   font-size: 1.1rem;
   color: #495057;
-  padding: 15px;
-  background: #e8f5e8;
-  border-radius: 8px;
-  border-left: 4px solid #28a745;
+}
+
+.applications-count strong {
+  color: #28a745;
+  font-size: 1.3rem;
 }
 
 .applications-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;
 }
 
 .application-card {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 10px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+  border-radius: 12px;
   padding: 20px;
+  border: 2px solid #dee2e6;
   transition: all 0.3s ease;
-  border-left: 4px solid #28a745;
 }
 
 .application-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: #28a745;
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+  transform: translateY(-3px);
 }
 
 .application-header {
@@ -205,24 +233,23 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #dee2e6;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #dee2e6;
 }
 
 .application-header h4 {
   margin: 0;
   color: #2c3e50;
-  font-size: 1.2rem;
-  font-weight: 600;
+  font-size: 1.1rem;
 }
 
 .academic-year {
   background: #28a745;
   color: white;
-  padding: 4px 12px;
+  padding: 5px 12px;
   border-radius: 20px;
   font-size: 0.85rem;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .application-details {
@@ -235,157 +262,58 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
 }
 
 .detail-row .label {
-  font-weight: 600;
-  color: #495057;
+  color: #6c757d;
   font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .detail-row .value {
   color: #2c3e50;
-  font-weight: 500;
-  text-align: right;
+  font-weight: 600;
 }
 
 .no-applications {
-  text-align: center;
   padding: 40px;
+  text-align: center;
   color: #6c757d;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px dashed #dee2e6;
-}
-
-.no-applications p {
-  margin: 0;
-  font-size: 1.1rem;
   font-style: italic;
 }
 
 .room-actions {
-  background: white;
-  border-radius: 12px;
-  padding: 30px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e9ecef;
-  text-align: center;
+  display: flex;
+  justify-content: center;
+  padding: 20px;
 }
 
-.loading-text {
+.loading-text,
+.error-message {
+  padding: 40px;
   text-align: center;
-  padding: 50px;
   font-size: 1.2rem;
   color: #6c757d;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .error-message {
-  text-align: center;
-  padding: 30px;
-  font-size: 1.2rem;
   color: #dc3545;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  background: #f8d7da;
   border: 1px solid #f5c6cb;
-  margin-bottom: 20px;
+  border-radius: 12px;
 }
 
-/* Responsive design */
 @media (max-width: 768px) {
-  .room-detail-container {
-    padding: 15px;
-  }
-  
-  .room-detail-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 15px;
-  }
-  
   .room-detail-header h1 {
     font-size: 2rem;
-  }
-  
-  .room-info-section,
-  .dormitory-info-section,
-  .applications-section,
-  .room-actions {
-    padding: 20px;
   }
   
   .room-info-grid,
   .dormitory-info-grid {
     grid-template-columns: 1fr;
-    gap: 15px;
-  }
-  
-  .info-item {
-    padding: 12px;
   }
   
   .applications-grid {
     grid-template-columns: 1fr;
-    gap: 15px;
-  }
-  
-  .application-card {
-    padding: 15px;
-  }
-  
-  .application-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-  
-  .detail-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 5px;
-  }
-  
-  .detail-row .value {
-    text-align: left;
-  }
-}
-
-@media (max-width: 480px) {
-  .room-detail-container {
-    padding: 10px;
-  }
-  
-  .room-detail-header h1 {
-    font-size: 1.8rem;
-  }
-  
-  .back-button {
-    padding: 8px 16px;
-    font-size: 0.9rem;
-  }
-  
-  .room-info-section h2,
-  .dormitory-info-section h2,
-  .applications-section h2 {
-    font-size: 1.5rem;
-  }
-  
-  .application-card {
-    padding: 12px;
-  }
-  
-  .applications-loading {
-    padding: 30px;
-    font-size: 1rem;
-  }
-  
-  .applications-count {
-    padding: 12px;
-    font-size: 1rem;
   }
 }

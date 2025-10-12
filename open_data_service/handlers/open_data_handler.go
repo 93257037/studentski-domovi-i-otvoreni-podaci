@@ -178,11 +178,11 @@ func (h *OpenDataHandler) GetOccupancyHeatmap(c *gin.Context) {
 
 // ExportData exports data in CSV or JSON format
 // GET /api/v1/open-data/export
-// Query params: dataset (dorms, rooms, statistics), format (csv, json)
+// Query params: dataset (dorms, rooms, dorm-statistics, application-analytics, amenities-report, occupancy-report, room-types), format (csv, json)
 func (h *OpenDataHandler) ExportData(c *gin.Context) {
 	dataset := c.Query("dataset")
 	if dataset == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "dataset parameter is required (dorms, rooms, or statistics)"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "dataset parameter is required (dorms, rooms, dorm-statistics, application-analytics, amenities-report, occupancy-report, or room-types)"})
 		return
 	}
 
@@ -233,6 +233,34 @@ func (h *OpenDataHandler) ExportData(c *gin.Context) {
 // ====================
 // Additional Helper Endpoints
 // ====================
+
+// GetRoomApplications proxies the request to st_dom_service to get accepted applications for a room
+// GET /api/v1/open-data/rooms/:roomId/applications
+func (h *OpenDataHandler) GetRoomApplications(c *gin.Context) {
+	roomID := c.Param("roomId")
+	if roomID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "room ID is required"})
+		return
+	}
+
+	// Get the authorization token from the request header
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authorization token required"})
+		return
+	}
+
+	// Call st_dom_service endpoint
+	applications, err := h.openDataService.GetRoomApplicationsFromStDomService(roomID, authHeader)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": applications,
+	})
+}
 
 // GetDormList returns a simple list of all dorms (for dropdown/selection)
 // GET /api/v1/open-data/dorms/list

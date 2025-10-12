@@ -57,6 +57,7 @@ func main() {
 	log.Println("  GET /health")
 	log.Println("  GET /api/v1/open-data/statistics")
 	log.Println("  GET /api/v1/open-data/rooms/search")
+	log.Println("  GET /api/v1/open-data/rooms/:roomId/applications")
 	log.Println("  GET /api/v1/open-data/dorms/compare")
 	log.Println("  GET /api/v1/open-data/dorms/list")
 	log.Println("  GET /api/v1/open-data/trends/applications")

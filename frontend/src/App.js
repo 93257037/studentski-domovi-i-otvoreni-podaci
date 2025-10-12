@@ -54,11 +54,7 @@ function AppContent() {
           />
           <Route 
             path="/room/:id" 
-            element={
-              <ProtectedRoute>
-                <RoomDetail />
-              </ProtectedRoute>
-            } 
+            element={<RoomDetail />} 
           />
           <Route 
             path="/advanced-search" 
