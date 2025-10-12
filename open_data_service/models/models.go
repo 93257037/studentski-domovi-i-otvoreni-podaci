@@ -90,6 +90,7 @@ type DormStats struct {
 	OccupiedSpots       int                `json:"occupied_spots"`
 	AvailableSpots      int                `json:"available_spots"`
 	OccupancyRate       float64            `json:"occupancy_rate"`
+	AverageProsek       float64            `json:"average_prosek"`
 	RoomTypes           map[int]int        `json:"room_types"`
 	Amenities           map[string]int     `json:"amenities"`
 }

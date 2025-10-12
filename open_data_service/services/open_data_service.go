@@ -296,6 +296,42 @@ func (s *OpenDataService) getDormStatistics(ctx context.Context) ([]models.DormS
 			stat.OccupancyRate = math.Round(stat.OccupancyRate*100) / 100
 		}
 
+		// Calculate average prosek of accepted applications for this dorm
+		avgProsekPipeline := mongo.Pipeline{
+			{{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "sobas"},
+				{Key: "localField", Value: "soba_id"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "room"},
+			}}},
+			{{Key: "$unwind", Value: "$room"}},
+			{{Key: "$match", Value: bson.D{
+				{Key: "room.st_dom_id", Value: dorm.ID},
+			}}},
+			{{Key: "$group", Value: bson.D{
+				{Key: "_id", Value: nil},
+				{Key: "avg_prosek", Value: bson.D{{Key: "$avg", Value: "$prosek"}}},
+			}}},
+		}
+
+		avgProsekCursor, err := s.prihvaceneAplikacijeCollection.Aggregate(ctx, avgProsekPipeline)
+		if err != nil {
+			return nil, err
+		}
+
+		var avgProsekResult []struct {
+			AvgProsek float64 `bson:"avg_prosek"`
+		}
+		if err = avgProsekCursor.All(ctx, &avgProsekResult); err != nil {
+			avgProsekCursor.Close(ctx)
+			return nil, err
+		}
+		avgProsekCursor.Close(ctx)
+
+		if len(avgProsekResult) > 0 && avgProsekResult[0].AvgProsek > 0 {
+			stat.AverageProsek = math.Round(avgProsekResult[0].AvgProsek*100) / 100
+		}
+
 		dormStats = append(dormStats, stat)
 	}
 
@@ -1155,7 +1191,7 @@ func (s *OpenDataService) exportStatistics(ctx context.Context, format models.Ex
 
 	// CSV format - export dorm statistics with Serbocroatian headers
 	var csvData [][]string
-	csvData = append(csvData, []string{"Ime Doma", "Adresa", "Ukupno Soba", "Ukupan Kapacitet", "Popunjeno", "Dostupno", "Stopa Popunjenosti (%)"})
+	csvData = append(csvData, []string{"Ime Doma", "Adresa", "Ukupno Soba", "Ukupan Kapacitet", "Popunjeno", "Dostupno", "Stopa Popunjenosti (%)", "Prosečan Prosek"})
 
 	for _, dormStat := range stats.DormStatistics {
 		csvData = append(csvData, []string{
@@ -1166,6 +1202,7 @@ func (s *OpenDataService) exportStatistics(ctx context.Context, format models.Ex
 			fmt.Sprintf("%d", dormStat.OccupiedSpots),
 			fmt.Sprintf("%d", dormStat.AvailableSpots),
 			fmt.Sprintf("%.2f", dormStat.OccupancyRate),
+			fmt.Sprintf("%.2f", dormStat.AverageProsek),
 		})
 	}
 
