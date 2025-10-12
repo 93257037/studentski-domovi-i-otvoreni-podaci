@@ -1,25 +1,17 @@
 # Build stage
 FROM golang:1.21-alpine AS builder
 
-# Install ca-certificates for HTTPS
-RUN apk add --no-cache ca-certificates
+# Install build dependencies
+RUN apk add --no-cache git
 
+# Set working directory
 WORKDIR /app
 
-# Set Go environment to use proxy and avoid VCS
-ENV GOPROXY=https://proxy.golang.org,direct
-ENV GOSUMDB=sum.golang.org
-ENV GONOPROXY=""
-ENV GONOSUMDB=""
-ENV GOPRIVATE=""
+# Copy go mod files
+COPY go.mod go.sum ./
 
-# Copy go mod and sum files (if they exist)
-COPY go.mod ./
-COPY go.su[m] ./
-
-# Download dependencies and ensure go.sum is generated
+# Download dependencies
 RUN go mod download
-RUN go mod tidy
 
 # Copy source code
 COPY . .
@@ -30,11 +22,12 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
 # Final stage
 FROM alpine:latest
 
+# Install ca-certificates for HTTPS requests
 RUN apk --no-cache add ca-certificates
 
 WORKDIR /root/
 
-# Copy the binary from builder stage
+# Copy the binary from builder
 COPY --from=builder /app/main .
 
 # Expose port
@@ -42,4 +35,3 @@ EXPOSE 8082
 
 # Run the application
 CMD ["./main"]
-

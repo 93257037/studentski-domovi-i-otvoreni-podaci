@@ -8,6 +8,7 @@ import StDomDetail from './components/StDomDetail';
 import RoomDetail from './components/RoomDetail';
 import AdvancedRoomSearch from './components/AdvancedRoomSearch';
 import AcademicYearApplications from './components/AcademicYearApplications';
+import OpenDataDashboard from './components/OpenDataDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
@@ -74,6 +75,10 @@ function AppContent() {
                 <AcademicYearApplications />
               </ProtectedRoute>
             } 
+          />
+          <Route 
+            path="/open-data" 
+            element={<OpenDataDashboard />} 
           />
           <Route 
             path="/" 

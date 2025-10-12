@@ -8,52 +8,44 @@ import (
 )
 
 // SetupRoutes configures all routes for the open data service
-func SetupRoutes(r *gin.Engine, handler *handlers.OpenDataHandler) {
-	// Add CORS middleware
-	r.Use(middleware.CORSMiddleware())
+func SetupRoutes(
+	router *gin.Engine,
+	openDataHandler *handlers.OpenDataHandler,
+	healthHandler *handlers.HealthHandler,
+) {
+	// Apply CORS middleware
+	router.Use(middleware.CORS())
 
 	// Health check endpoint
-	r.GET("/health", handler.Health)
+	router.GET("/health", healthHandler.HealthCheck)
 
 	// API v1 routes
-	v1 := r.Group("/api/v1")
+	v1 := router.Group("/api/v1")
 	{
-		// Room filtering endpoints
-		rooms := v1.Group("/rooms")
+		// Open Data routes group
+		openData := v1.Group("/open-data")
 		{
-			rooms.GET("", handler.GetAllRooms)                               // Get all rooms
-			rooms.GET("/filter-by-luksuz", handler.FilterRoomsByLuksuz)      // Filter by luxury amenities
-			rooms.GET("/filter-by-luksuz-and-stdom", handler.FilterRoomsByLuksuzAndStDom) // Filter by luxury and dorm
-			rooms.GET("/filter-by-krevetnost", handler.FilterRoomsByKrevetnost)           // Filter by bed capacity
-			rooms.GET("/advanced-filter", handler.AdvancedFilterRooms)                    // Advanced multi-criteria filter
-		}
+			// 1. Public Statistics Dashboard
+			openData.GET("/statistics", openDataHandler.GetPublicStatistics)
 
-		// Student dormitory endpoints
-		stDoms := v1.Group("/st-doms")
-		{
-			stDoms.GET("", handler.GetAllStDoms)                          // Get all student dormitories
-			stDoms.GET("/search-by-address", handler.SearchStDomsByAddress) // Search by address (regex)
-			stDoms.GET("/search-by-ime", handler.SearchStDomsByIme)         // Search by name (regex)
-		}
+			// 2. Room Availability Search
+			openData.GET("/rooms/search", openDataHandler.SearchAvailableRooms)
 
-		// Statistics endpoints
-		statistics := v1.Group("/statistics")
-		{
-			statistics.GET("/top-full-st-doms", handler.GetTopFullStDoms)                          // Get top 3 most full dormitories
-			statistics.GET("/top-empty-st-doms", handler.GetTopEmptyStDoms)                        // Get top 3 most empty dormitories
-			statistics.GET("/st-dom-most-applications", handler.GetStDomWithMostApplications)      // Get dormitory with most applications
-			statistics.GET("/st-dom-highest-average-prosek", handler.GetStDomWithHighestAverageProsek) // Get dormitory with highest average prosek
-		}
+			// 3. Dorm Comparison Tool
+			openData.GET("/dorms/compare", openDataHandler.CompareDorms)
+			openData.GET("/dorms/list", openDataHandler.GetDormList)
 
-		// Inter-service communication endpoints
-		interService := v1.Group("/inter-service")
-		{
-			interService.GET("/health", handler.CheckStDomServiceHealth)                                    // Check st_dom_service health
-			interService.GET("/prihvacene-aplikacije", handler.GetPrihvaceneAplikacije)                    // Get all accepted applications
-			interService.GET("/prihvacene-aplikacije/user/:userId", handler.GetPrihvaceneAplikacijeForUser) // Get accepted applications for user
-			interService.GET("/prihvacene-aplikacije/room/:roomId", handler.GetPrihvaceneAplikacijeForRoom) // Get accepted applications for room
-			interService.GET("/prihvacene-aplikacije/academic-year", handler.GetPrihvaceneAplikacijeForAcademicYear) // Get accepted applications for academic year
+			// 4. Application Trends Analysis
+			openData.GET("/trends/applications", openDataHandler.GetApplicationTrends)
+
+			// 5. Real-time Occupancy Heatmap
+			openData.GET("/occupancy/heatmap", openDataHandler.GetOccupancyHeatmap)
+
+			// 6. Open Data Export (CSV/JSON)
+			openData.GET("/export", openDataHandler.ExportData)
+
+			// Helper endpoints
+			openData.GET("/amenities", openDataHandler.GetAvailableAmenities)
 		}
 	}
 }
-

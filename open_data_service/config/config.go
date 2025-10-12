@@ -7,38 +7,36 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Config holds all configuration values
+// Config - holds all configuration values for the service
 type Config struct {
-	MongoDBURI     string
-	DatabaseName   string
-	Port           string
-	GinMode        string
+	MongoDBURI      string
+	DatabaseName    string
+	Port            string
+	GinMode         string
 	StDomServiceURL string
 }
 
-// LoadConfig loads configuration from environment variables
+// LoadConfig loads configuration from environment variables or config.env file
 func LoadConfig() *Config {
-	// Try to load from config.env file
 	if err := godotenv.Load("config.env"); err != nil {
 		log.Println("No config.env file found, using environment variables")
 	}
 
 	config := &Config{
-		MongoDBURI:     getEnv("MONGODB_URI", "mongodb://localhost:27018"),
-		DatabaseName:   getEnv("DATABASE_NAME", "st_dom_db"),
-		Port:           getEnv("PORT", "8082"),
-		GinMode:        getEnv("GIN_MODE", "debug"),
+		MongoDBURI:      getEnv("MONGODB_URI", "mongodb://localhost:27018"),
+		DatabaseName:    getEnv("DATABASE_NAME", "st_dom_db"),
+		Port:            getEnv("PORT", "8082"),
+		GinMode:         getEnv("GIN_MODE", "debug"),
 		StDomServiceURL: getEnv("ST_DOM_SERVICE_URL", "http://localhost:8081"),
 	}
 
 	return config
 }
 
-// getEnv gets an environment variable with a fallback value
+// getEnv gets an environment variable or returns a fallback value
 func getEnv(key, fallback string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value
 	}
 	return fallback
 }
-

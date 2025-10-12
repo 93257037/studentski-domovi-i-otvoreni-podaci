@@ -11,14 +11,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// main starts the open_data_service
+// loads configuration, connects to database, creates services and handlers, sets up routes
 func main() {
-	// Load configuration
 	cfg := config.LoadConfig()
 
-	// Set Gin mode
 	gin.SetMode(cfg.GinMode)
 
-	// Connect to MongoDB (same database as st_dom_service)
 	db, err := database.NewMongoDB(cfg.MongoDBURI, cfg.DatabaseName)
 	if err != nil {
 		log.Fatal("Failed to connect to MongoDB:", err)
@@ -30,30 +29,42 @@ func main() {
 	}()
 
 	// Get collections
-	sobasCollection := db.GetCollection("sobas")
 	stDomsCollection := db.GetCollection("st_doms")
+	sobasCollection := db.GetCollection("sobas")
 	aplikacijeCollection := db.GetCollection("aplikacije")
 	prihvaceneAplikacijeCollection := db.GetCollection("prihvacene_aplikacije")
 
-	// Initialize services
-	openDataService := services.NewOpenDataService(sobasCollection, stDomsCollection, aplikacijeCollection, prihvaceneAplikacijeCollection)
-	
-	// Initialize HTTP client service for inter-service communication
-	httpClientService := services.NewHTTPClientService(cfg.StDomServiceURL)
+	// Create services
+	openDataService := services.NewOpenDataService(
+		stDomsCollection,
+		sobasCollection,
+		aplikacijeCollection,
+		prihvaceneAplikacijeCollection,
+	)
 
-	// Initialize handlers
-	openDataHandler := handlers.NewOpenDataHandler(openDataService, httpClientService)
+	// Create handlers
+	openDataHandler := handlers.NewOpenDataHandler(openDataService)
+	healthHandler := handlers.NewHealthHandler()
 
-	// Initialize Gin router
+	// Create router
 	router := gin.Default()
 
 	// Setup routes
-	routes.SetupRoutes(router, openDataHandler)
+	routes.SetupRoutes(router, openDataHandler, healthHandler)
 
-	// Start server
 	log.Printf("Open Data Service starting on port %s", cfg.Port)
+	log.Println("Available endpoints:")
+	log.Println("  GET /health")
+	log.Println("  GET /api/v1/open-data/statistics")
+	log.Println("  GET /api/v1/open-data/rooms/search")
+	log.Println("  GET /api/v1/open-data/dorms/compare")
+	log.Println("  GET /api/v1/open-data/dorms/list")
+	log.Println("  GET /api/v1/open-data/trends/applications")
+	log.Println("  GET /api/v1/open-data/occupancy/heatmap")
+	log.Println("  GET /api/v1/open-data/export")
+	log.Println("  GET /api/v1/open-data/amenities")
+
 	if err := router.Run(":" + cfg.Port); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}
 }
-

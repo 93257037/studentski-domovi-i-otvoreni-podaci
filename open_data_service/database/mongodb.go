@@ -8,7 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// MongoDB represents a MongoDB connection
+// MongoDB wraps the MongoDB client and provides access to collections
 type MongoDB struct {
 	client   *mongo.Client
 	database *mongo.Database
@@ -19,18 +19,14 @@ func NewMongoDB(uri, dbName string) (*MongoDB, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Set client options
 	clientOptions := options.Client().ApplyURI(uri)
-
-	// Connect to MongoDB
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	// Check the connection
-	err = client.Ping(ctx, nil)
-	if err != nil {
+	// Ping the database to verify connection
+	if err := client.Ping(ctx, nil); err != nil {
 		return nil, err
 	}
 
@@ -42,21 +38,14 @@ func NewMongoDB(uri, dbName string) (*MongoDB, error) {
 	}, nil
 }
 
-// GetCollection returns a collection from the database
-func (m *MongoDB) GetCollection(name string) *mongo.Collection {
-	return m.database.Collection(name)
+// GetCollection returns a MongoDB collection
+func (db *MongoDB) GetCollection(name string) *mongo.Collection {
+	return db.database.Collection(name)
 }
 
 // Close closes the MongoDB connection
-func (m *MongoDB) Close() error {
+func (db *MongoDB) Close() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	
-	return m.client.Disconnect(ctx)
+	return db.client.Disconnect(ctx)
 }
-
-// GetDatabase returns the database instance
-func (m *MongoDB) GetDatabase() *mongo.Database {
-	return m.database
-}
-

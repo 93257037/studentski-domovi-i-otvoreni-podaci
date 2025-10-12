@@ -2,404 +2,168 @@ package services
 
 import (
 	"context"
+	"encoding/csv"
+	"encoding/json"
+	"fmt"
+	"math"
 	"open_data_service/models"
+	"sort"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// OpenDataService handles business logic for open data operations
+// OpenDataService handles all open data operations
 type OpenDataService struct {
-	sobasCollection                *mongo.Collection
 	stDomsCollection               *mongo.Collection
+	sobasCollection                *mongo.Collection
 	aplikacijeCollection           *mongo.Collection
 	prihvaceneAplikacijeCollection *mongo.Collection
 }
 
 // NewOpenDataService creates a new OpenDataService
-func NewOpenDataService(sobasCollection, stDomsCollection, aplikacijeCollection, prihvaceneAplikacijeCollection *mongo.Collection) *OpenDataService {
+func NewOpenDataService(
+	stDomsCollection *mongo.Collection,
+	sobasCollection *mongo.Collection,
+	aplikacijeCollection *mongo.Collection,
+	prihvaceneAplikacijeCollection *mongo.Collection,
+) *OpenDataService {
 	return &OpenDataService{
-		sobasCollection:                sobasCollection,
 		stDomsCollection:               stDomsCollection,
+		sobasCollection:                sobasCollection,
 		aplikacijeCollection:           aplikacijeCollection,
 		prihvaceneAplikacijeCollection: prihvaceneAplikacijeCollection,
 	}
 }
 
-// FilterRoomsByLuksuz filters rooms by any combination of luxury amenities
-// Returns rooms that have ALL specified luxury amenities
-func (s *OpenDataService) FilterRoomsByLuksuz(luksuzi []models.Luksuzi) ([]models.Soba, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+// ====================
+// 1. Public Statistics Dashboard
+// ====================
+
+// GetPublicStatistics returns comprehensive public statistics about all dorms
+func (s *OpenDataService) GetPublicStatistics() (*models.PublicStatistics, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Build filter - rooms must contain all specified luxury amenities
-	filter := bson.M{}
-	if len(luksuzi) > 0 {
-		filter["luksuzi"] = bson.M{"$all": luksuzi}
+	stats := &models.PublicStatistics{
+		LastUpdated: time.Now(),
 	}
 
-	cursor, err := s.sobasCollection.Find(ctx, filter)
+	// Get total dorms
+	totalDorms, err := s.stDomsCollection.CountDocuments(ctx, bson.M{})
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	stats.TotalDorms = int(totalDorms)
 
-	var sobas []models.Soba
-	if err = cursor.All(ctx, &sobas); err != nil {
-		return nil, err
-	}
-
-	return sobas, nil
-}
-
-// FilterRoomsByLuksuzAndStDom filters rooms by luxury amenities and student dormitory
-// Returns rooms that have ALL specified luxury amenities and belong to the specified st_dom
-func (s *OpenDataService) FilterRoomsByLuksuzAndStDom(luksuzi []models.Luksuzi, stDomID primitive.ObjectID) ([]models.SobaWithStDom, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	// Build filter
-	filter := bson.M{
-		"st_dom_id": stDomID,
-	}
-	if len(luksuzi) > 0 {
-		filter["luksuzi"] = bson.M{"$all": luksuzi}
-	}
-
-	cursor, err := s.sobasCollection.Find(ctx, filter)
+	// Get total rooms
+	totalRooms, err := s.sobasCollection.CountDocuments(ctx, bson.M{})
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	stats.TotalRooms = int(totalRooms)
 
-	var sobas []models.Soba
-	if err = cursor.All(ctx, &sobas); err != nil {
-		return nil, err
-	}
-
-	// Fetch the st_dom information
-	var stDom models.StDom
-	err = s.stDomsCollection.FindOne(ctx, bson.M{"_id": stDomID}).Decode(&stDom)
-	if err != nil {
-		return nil, err
-	}
-
-	// Combine room data with st_dom information
-	var result []models.SobaWithStDom
-	for _, soba := range sobas {
-		result = append(result, models.SobaWithStDom{
-			ID:         soba.ID,
-			StDomID:    soba.StDomID,
-			Krevetnost: soba.Krevetnost,
-			Luksuzi:    soba.Luksuzi,
-			CreatedAt:  soba.CreatedAt,
-			UpdatedAt:  soba.UpdatedAt,
-			StDom:      &stDom,
-		})
-	}
-
-	return result, nil
-}
-
-// FilterRoomsByKrevetnost filters rooms by bed capacity (krevetnost)
-// Supports exact match, min, max, or range filtering
-func (s *OpenDataService) FilterRoomsByKrevetnost(exact *int, min *int, max *int) ([]models.Soba, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	// Build filter based on provided parameters
-	filter := bson.M{}
-	
-	if exact != nil {
-		// Exact match
-		filter["krevetnost"] = *exact
-	} else {
-		// Range filtering
-		krevetnostFilter := bson.M{}
-		if min != nil {
-			krevetnostFilter["$gte"] = *min
-		}
-		if max != nil {
-			krevetnostFilter["$lte"] = *max
-		}
-		if len(krevetnostFilter) > 0 {
-			filter["krevetnost"] = krevetnostFilter
-		}
-	}
-
-	cursor, err := s.sobasCollection.Find(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
-
-	var sobas []models.Soba
-	if err = cursor.All(ctx, &sobas); err != nil {
-		return nil, err
-	}
-
-	return sobas, nil
-}
-
-// SearchStDomsByAddress searches student dormitories by address using regex pattern matching
-// Returns dormitories whose address matches the provided pattern
-func (s *OpenDataService) SearchStDomsByAddress(addressPattern string) ([]models.StDom, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	// Use regex for partial matching (case-insensitive)
-	filter := bson.M{
-		"address": bson.M{
-			"$regex":   addressPattern,
-			"$options": "i", // case-insensitive
-		},
-	}
-
-	cursor, err := s.stDomsCollection.Find(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
-
-	var stDoms []models.StDom
-	if err = cursor.All(ctx, &stDoms); err != nil {
-		return nil, err
-	}
-
-	return stDoms, nil
-}
-
-// SearchStDomsByIme searches student dormitories by name using regex pattern matching
-// Returns dormitories whose ime (name) matches the provided pattern
-func (s *OpenDataService) SearchStDomsByIme(imePattern string) ([]models.StDom, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	// Use regex for partial matching (case-insensitive)
-	filter := bson.M{
-		"ime": bson.M{
-			"$regex":   imePattern,
-			"$options": "i", // case-insensitive
-		},
-	}
-
-	cursor, err := s.stDomsCollection.Find(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
-
-	var stDoms []models.StDom
-	if err = cursor.All(ctx, &stDoms); err != nil {
-		return nil, err
-	}
-
-	return stDoms, nil
-}
-
-// AdvancedFilterRooms provides a comprehensive filtering endpoint combining multiple criteria
-// Allows filtering by luksuzi, st_dom_id, krevetnost (exact, min, max), and address pattern all at once
-func (s *OpenDataService) AdvancedFilterRooms(luksuzi []models.Luksuzi, stDomID *primitive.ObjectID, addressPattern string, exact *int, min *int, max *int) ([]models.SobaWithStDom, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	// If address pattern is provided, first find matching dormitories
-	var matchingStDomIDs []primitive.ObjectID
-	if addressPattern != "" {
-		stDomFilter := bson.M{
-			"address": bson.M{
-				"$regex":   addressPattern,
-				"$options": "i", // case-insensitive
-			},
-		}
-		
-		stDomsCursor, err := s.stDomsCollection.Find(ctx, stDomFilter)
-		if err != nil {
-			return nil, err
-		}
-		defer stDomsCursor.Close(ctx)
-
-		var matchingStDoms []models.StDom
-		if err = stDomsCursor.All(ctx, &matchingStDoms); err != nil {
-			return nil, err
-		}
-
-		// Extract IDs
-		for _, stDom := range matchingStDoms {
-			matchingStDomIDs = append(matchingStDomIDs, stDom.ID)
-		}
-
-		// If no dormitories match the address pattern, return empty result
-		if len(matchingStDomIDs) == 0 {
-			return []models.SobaWithStDom{}, nil
-		}
-	}
-
-	// Build comprehensive filter for rooms
-	filter := bson.M{}
-	
-	// Filter by luxury amenities
-	if len(luksuzi) > 0 {
-		filter["luksuzi"] = bson.M{"$all": luksuzi}
-	}
-	
-	// Filter by student dormitory (either specific ID or address pattern matches)
-	if stDomID != nil {
-		// Specific dormitory ID provided
-		filter["st_dom_id"] = *stDomID
-	} else if len(matchingStDomIDs) > 0 {
-		// Address pattern provided - filter by matching dormitory IDs
-		filter["st_dom_id"] = bson.M{"$in": matchingStDomIDs}
-	}
-	
-	// Filter by krevetnost
-	if exact != nil {
-		filter["krevetnost"] = *exact
-	} else {
-		krevetnostFilter := bson.M{}
-		if min != nil {
-			krevetnostFilter["$gte"] = *min
-		}
-		if max != nil {
-			krevetnostFilter["$lte"] = *max
-		}
-		if len(krevetnostFilter) > 0 {
-			filter["krevetnost"] = krevetnostFilter
-		}
-	}
-
-	cursor, err := s.sobasCollection.Find(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(ctx)
-
-	var sobas []models.Soba
-	if err = cursor.All(ctx, &sobas); err != nil {
-		return nil, err
-	}
-
-	// Group rooms by st_dom_id to minimize database queries
-	stDomIDsMap := make(map[primitive.ObjectID]bool)
-	for _, soba := range sobas {
-		stDomIDsMap[soba.StDomID] = true
-	}
-
-	// Fetch all relevant st_doms in one query
-	var stDomIDs []primitive.ObjectID
-	for id := range stDomIDsMap {
-		stDomIDs = append(stDomIDs, id)
-	}
-
-	stDomsMap := make(map[primitive.ObjectID]*models.StDom)
-	if len(stDomIDs) > 0 {
-		stDomsCursor, err := s.stDomsCollection.Find(ctx, bson.M{"_id": bson.M{"$in": stDomIDs}})
-		if err != nil {
-			return nil, err
-		}
-		defer stDomsCursor.Close(ctx)
-
-		var stDoms []models.StDom
-		if err = stDomsCursor.All(ctx, &stDoms); err != nil {
-			return nil, err
-		}
-
-		for i := range stDoms {
-			stDomsMap[stDoms[i].ID] = &stDoms[i]
-		}
-	}
-
-	// Combine room data with st_dom information
-	var result []models.SobaWithStDom
-	for _, soba := range sobas {
-		stDom := stDomsMap[soba.StDomID]
-		result = append(result, models.SobaWithStDom{
-			ID:         soba.ID,
-			StDomID:    soba.StDomID,
-			Krevetnost: soba.Krevetnost,
-			Luksuzi:    soba.Luksuzi,
-			CreatedAt:  soba.CreatedAt,
-			UpdatedAt:  soba.UpdatedAt,
-			StDom:      stDom,
-		})
-	}
-
-	return result, nil
-}
-
-// GetAllRooms returns all rooms (for open data access)
-func (s *OpenDataService) GetAllRooms() ([]models.Soba, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
+	// Get all rooms to calculate capacity and amenities
 	cursor, err := s.sobasCollection.Find(ctx, bson.M{})
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
 
-	var sobas []models.Soba
-	if err = cursor.All(ctx, &sobas); err != nil {
+	var rooms []models.Soba
+	if err = cursor.All(ctx, &rooms); err != nil {
 		return nil, err
 	}
 
-	return sobas, nil
-}
+	// Calculate total capacity and amenities distribution
+	amenitiesMap := make(map[string]int)
+	roomTypeMap := make(map[int]int)
+	totalCapacity := 0
 
-// GetAllStDoms returns all student dormitories (for open data access)
-func (s *OpenDataService) GetAllStDoms() ([]models.StDom, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	for _, room := range rooms {
+		totalCapacity += room.Krevetnost
+		roomTypeMap[room.Krevetnost]++
 
-	cursor, err := s.stDomsCollection.Find(ctx, bson.M{})
+		for _, amenity := range room.Luksuzi {
+			amenitiesMap[amenity]++
+		}
+	}
+
+	stats.TotalCapacity = totalCapacity
+	stats.AmenitiesDistribution = amenitiesMap
+	stats.RoomTypeDistribution = roomTypeMap
+
+	// Get total occupied spots from accepted applications
+	totalOccupied, err := s.prihvaceneAplikacijeCollection.CountDocuments(ctx, bson.M{})
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
+	stats.TotalOccupied = int(totalOccupied)
 
-	var stDoms []models.StDom
-	if err = cursor.All(ctx, &stDoms); err != nil {
-		return nil, err
+	// Calculate occupancy rate
+	if totalCapacity > 0 {
+		stats.OccupancyRate = float64(totalOccupied) / float64(totalCapacity) * 100
+		stats.OccupancyRate = math.Round(stats.OccupancyRate*100) / 100
 	}
 
-	return stDoms, nil
+	// Get application statistics
+	appStats, err := s.getApplicationStatistics(ctx)
+	if err != nil {
+		return nil, err
+	}
+	stats.ApplicationStatistics = *appStats
+
+	// Get per-dorm statistics
+	dormStats, err := s.getDormStatistics(ctx)
+	if err != nil {
+		return nil, err
+	}
+	stats.DormStatistics = dormStats
+
+	return stats, nil
 }
 
-// StDomOccupancyStats represents occupancy statistics for a student dormitory
-type StDomOccupancyStats struct {
-	StDom       models.StDom `json:"st_dom"`
-	OccupiedCount int        `json:"occupied_count"`
-	TotalCapacity int        `json:"total_capacity"`
-	OccupancyRate float64    `json:"occupancy_rate"`
-}
+// getApplicationStatistics calculates application-related statistics
+func (s *OpenDataService) getApplicationStatistics(ctx context.Context) (*models.ApplicationStats, error) {
+	stats := &models.ApplicationStats{}
 
-// GetTopFullStDoms returns the top 3 most full student dormitories based on the number of residents
-func (s *OpenDataService) GetTopFullStDoms() ([]StDomOccupancyStats, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	// Total applications
+	total, err := s.aplikacijeCollection.CountDocuments(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	stats.TotalApplications = int(total)
 
-	// Aggregation pipeline to count residents per st_dom
+	// Active applications
+	active, err := s.aplikacijeCollection.CountDocuments(ctx, bson.M{"is_active": true})
+	if err != nil {
+		return nil, err
+	}
+	stats.ActiveApplications = int(active)
+
+	// Accepted applications
+	accepted, err := s.prihvaceneAplikacijeCollection.CountDocuments(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	stats.AcceptedApplications = int(accepted)
+
+	// Acceptance rate
+	if stats.TotalApplications > 0 {
+		stats.AcceptanceRate = float64(stats.AcceptedApplications) / float64(stats.TotalApplications) * 100
+		stats.AcceptanceRate = math.Round(stats.AcceptanceRate*100) / 100
+	}
+
+	// Average grade of accepted applications
 	pipeline := mongo.Pipeline{
-		// Stage 1: Lookup to join prihvacena_aplikacije with sobas to get st_dom_id
-		bson.D{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "sobas"},
-			{Key: "localField", Value: "soba_id"},
-			{Key: "foreignField", Value: "_id"},
-			{Key: "as", Value: "soba"},
+		{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: nil},
+			{Key: "avg_grade", Value: bson.D{{Key: "$avg", Value: "$prosek"}}},
 		}}},
-		// Stage 2: Unwind soba array
-		bson.D{{Key: "$unwind", Value: "$soba"}},
-		// Stage 3: Group by st_dom_id and count residents
-		bson.D{{Key: "$group", Value: bson.D{
-			{Key: "_id", Value: "$soba.st_dom_id"},
-			{Key: "occupied_count", Value: bson.D{{Key: "$sum", Value: 1}}},
-		}}},
-		// Stage 4: Sort by occupied_count descending
-		bson.D{{Key: "$sort", Value: bson.D{{Key: "occupied_count", Value: -1}}}},
-		// Stage 5: Limit to top 3
-		bson.D{{Key: "$limit", Value: 3}},
 	}
 
 	cursor, err := s.prihvaceneAplikacijeCollection.Aggregate(ctx, pipeline)
@@ -408,194 +172,399 @@ func (s *OpenDataService) GetTopFullStDoms() ([]StDomOccupancyStats, error) {
 	}
 	defer cursor.Close(ctx)
 
-	var results []struct {
-		ID            primitive.ObjectID `bson:"_id"`
-		OccupiedCount int                `bson:"occupied_count"`
+	var result []struct {
+		AvgGrade float64 `bson:"avg_grade"`
 	}
-	if err = cursor.All(ctx, &results); err != nil {
+	if err = cursor.All(ctx, &result); err != nil {
 		return nil, err
 	}
+	if len(result) > 0 {
+		stats.AverageGradeOfAccepted = math.Round(result[0].AvgGrade*100) / 100
+	}
 
+	// Average grade of all applications
+	cursor2, err := s.aplikacijeCollection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor2.Close(ctx)
 
-	// Fetch st_dom details and calculate total capacity for each
-	var stats []StDomOccupancyStats
-	for _, result := range results {
-		// Get st_dom details
-		var stDom models.StDom
-		err := s.stDomsCollection.FindOne(ctx, bson.M{"_id": result.ID}).Decode(&stDom)
-		if err != nil {
-			continue
-		}
-
-		// Calculate total capacity (sum of krevetnost for all rooms in this st_dom)
-		capacityPipeline := mongo.Pipeline{
-			bson.D{{Key: "$match", Value: bson.D{{Key: "st_dom_id", Value: result.ID}}}},
-			bson.D{{Key: "$group", Value: bson.D{
-				{Key: "_id", Value: nil},
-				{Key: "total_capacity", Value: bson.D{{Key: "$sum", Value: "$krevetnost"}}},
-			}}},
-		}
-
-		capacityCursor, err := s.sobasCollection.Aggregate(ctx, capacityPipeline)
-		if err != nil {
-			continue
-		}
-
-		var capacityResult []struct {
-			TotalCapacity int `bson:"total_capacity"`
-		}
-		if err = capacityCursor.All(ctx, &capacityResult); err != nil || len(capacityResult) == 0 {
-			capacityCursor.Close(ctx)
-			continue
-		}
-		capacityCursor.Close(ctx)
-
-		totalCapacity := capacityResult[0].TotalCapacity
-		occupancyRate := 0.0
-		if totalCapacity > 0 {
-			occupancyRate = float64(result.OccupiedCount) / float64(totalCapacity) * 100
-		}
-
-		stats = append(stats, StDomOccupancyStats{
-			StDom:         stDom,
-			OccupiedCount: result.OccupiedCount,
-			TotalCapacity: totalCapacity,
-			OccupancyRate: occupancyRate,
-		})
+	var result2 []struct {
+		AvgGrade float64 `bson:"avg_grade"`
+	}
+	if err = cursor2.All(ctx, &result2); err != nil {
+		return nil, err
+	}
+	if len(result2) > 0 {
+		stats.AverageGradeOfApplications = math.Round(result2[0].AvgGrade*100) / 100
 	}
 
 	return stats, nil
 }
 
-// GetTopEmptyStDoms returns the top 3 most empty student dormitories based on available capacity
-func (s *OpenDataService) GetTopEmptyStDoms() ([]StDomOccupancyStats, error) {
+// getDormStatistics calculates statistics for each dorm
+func (s *OpenDataService) getDormStatistics(ctx context.Context) ([]models.DormStats, error) {
+	// Get all dorms
+	cursor, err := s.stDomsCollection.Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var dorms []models.StDom
+	if err = cursor.All(ctx, &dorms); err != nil {
+		return nil, err
+	}
+
+	var dormStats []models.DormStats
+
+	for _, dorm := range dorms {
+		stat := models.DormStats{
+			DormID:   dorm.ID,
+			DormName: dorm.Ime,
+			Address:  dorm.Address,
+			RoomTypes: make(map[int]int),
+			Amenities: make(map[string]int),
+		}
+
+		// Get rooms for this dorm
+		roomCursor, err := s.sobasCollection.Find(ctx, bson.M{"st_dom_id": dorm.ID})
+		if err != nil {
+			return nil, err
+		}
+
+		var rooms []models.Soba
+		if err = roomCursor.All(ctx, &rooms); err != nil {
+			roomCursor.Close(ctx)
+			return nil, err
+		}
+		roomCursor.Close(ctx)
+
+		stat.TotalRooms = len(rooms)
+
+		// Calculate capacity, amenities, and room types
+		for _, room := range rooms {
+			stat.TotalCapacity += room.Krevetnost
+			stat.RoomTypes[room.Krevetnost]++
+
+			for _, amenity := range room.Luksuzi {
+				stat.Amenities[amenity]++
+			}
+		}
+
+		// Get occupied spots for this dorm
+		pipeline := mongo.Pipeline{
+			{{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "sobas"},
+				{Key: "localField", Value: "soba_id"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "room"},
+			}}},
+			{{Key: "$unwind", Value: "$room"}},
+			{{Key: "$match", Value: bson.D{
+				{Key: "room.st_dom_id", Value: dorm.ID},
+			}}},
+			{{Key: "$count", Value: "total"}},
+		}
+
+		occupiedCursor, err := s.prihvaceneAplikacijeCollection.Aggregate(ctx, pipeline)
+		if err != nil {
+			return nil, err
+		}
+
+		var occupiedResult []struct {
+			Total int `bson:"total"`
+		}
+		if err = occupiedCursor.All(ctx, &occupiedResult); err != nil {
+			occupiedCursor.Close(ctx)
+			return nil, err
+		}
+		occupiedCursor.Close(ctx)
+
+		if len(occupiedResult) > 0 {
+			stat.OccupiedSpots = occupiedResult[0].Total
+		}
+
+		stat.AvailableSpots = stat.TotalCapacity - stat.OccupiedSpots
+
+		// Calculate occupancy rate
+		if stat.TotalCapacity > 0 {
+			stat.OccupancyRate = float64(stat.OccupiedSpots) / float64(stat.TotalCapacity) * 100
+			stat.OccupancyRate = math.Round(stat.OccupancyRate*100) / 100
+		}
+
+		dormStats = append(dormStats, stat)
+	}
+
+	return dormStats, nil
+}
+
+// ====================
+// 2. Room Availability Search
+// ====================
+
+// SearchAvailableRooms searches for available rooms with filters
+func (s *OpenDataService) SearchAvailableRooms(filters models.RoomSearchFilters) ([]models.RoomAvailability, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Get all st_doms
-	allStDoms, err := s.GetAllStDoms()
+	// Build query
+	query := bson.M{}
+
+	if filters.DormID != "" {
+		dormOID, err := primitive.ObjectIDFromHex(filters.DormID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid dorm_id format")
+		}
+		query["st_dom_id"] = dormOID
+	}
+
+	if filters.MinCapacity > 0 {
+		query["krevetnost"] = bson.M{"$gte": filters.MinCapacity}
+	}
+
+	if filters.MaxCapacity > 0 {
+		if query["krevetnost"] != nil {
+			query["krevetnost"].(bson.M)["$lte"] = filters.MaxCapacity
+		} else {
+			query["krevetnost"] = bson.M{"$lte": filters.MaxCapacity}
+		}
+	}
+
+	if len(filters.Amenities) > 0 {
+		query["luksuzi"] = bson.M{"$all": filters.Amenities}
+	}
+
+	// Set default limit and offset
+	if filters.Limit <= 0 {
+		filters.Limit = 50
+	}
+	if filters.Offset < 0 {
+		filters.Offset = 0
+	}
+
+	// Get rooms matching query
+	opts := options.Find().SetLimit(int64(filters.Limit)).SetSkip(int64(filters.Offset))
+	cursor, err := s.sobasCollection.Find(ctx, query, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var rooms []models.Soba
+	if err = cursor.All(ctx, &rooms); err != nil {
+		return nil, err
+	}
+
+	// Get all dorms for reference
+	dormsMap, err := s.getAllDormsMap(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var stats []StDomOccupancyStats
+	// Calculate availability for each room
+	var roomAvailabilities []models.RoomAvailability
 
-	for _, stDom := range allStDoms {
-		// Calculate total capacity for this st_dom
-		capacityPipeline := mongo.Pipeline{
-			bson.D{{Key: "$match", Value: bson.D{{Key: "st_dom_id", Value: stDom.ID}}}},
-			bson.D{{Key: "$group", Value: bson.D{
-				{Key: "_id", Value: nil},
-				{Key: "total_capacity", Value: bson.D{{Key: "$sum", Value: "$krevetnost"}}},
-			}}},
-		}
-
-		capacityCursor, err := s.sobasCollection.Aggregate(ctx, capacityPipeline)
+	for _, room := range rooms {
+		// Count occupied spots in this room
+		occupied, err := s.prihvaceneAplikacijeCollection.CountDocuments(ctx, bson.M{"soba_id": room.ID})
 		if err != nil {
+			return nil, err
+		}
+
+		available := room.Krevetnost - int(occupied)
+		isAvailable := available > 0
+
+		// Filter by availability if requested
+		if filters.OnlyAvailable && !isAvailable {
 			continue
 		}
 
-		var capacityResult []struct {
-			TotalCapacity int `bson:"total_capacity"`
-		}
-		if err = capacityCursor.All(ctx, &capacityResult); err != nil || len(capacityResult) == 0 {
-			capacityCursor.Close(ctx)
-			continue
-		}
-		capacityCursor.Close(ctx)
-		totalCapacity := capacityResult[0].TotalCapacity
+		dorm := dormsMap[room.StDomID.Hex()]
 
-		// Count occupied spots for this st_dom
-		occupiedPipeline := mongo.Pipeline{
-			bson.D{{Key: "$lookup", Value: bson.D{
-				{Key: "from", Value: "sobas"},
-				{Key: "localField", Value: "soba_id"},
-				{Key: "foreignField", Value: "_id"},
-				{Key: "as", Value: "soba"},
-			}}},
-			bson.D{{Key: "$unwind", Value: "$soba"}},
-			bson.D{{Key: "$match", Value: bson.D{{Key: "soba.st_dom_id", Value: stDom.ID}}}},
-			bson.D{{Key: "$count", Value: "occupied_count"}},
+		roomAvailability := models.RoomAvailability{
+			RoomID:         room.ID,
+			DormID:         room.StDomID,
+			DormName:       dorm.Ime,
+			DormAddress:    dorm.Address,
+			Capacity:       room.Krevetnost,
+			Occupied:       int(occupied),
+			AvailableSpots: available,
+			Amenities:      room.Luksuzi,
+			IsAvailable:    isAvailable,
 		}
 
-		occupiedCursor, err := s.prihvaceneAplikacijeCollection.Aggregate(ctx, occupiedPipeline)
-		if err != nil {
-			continue
-		}
-
-		var occupiedResult []struct {
-			OccupiedCount int `bson:"occupied_count"`
-		}
-		occupiedCount := 0
-		if err = occupiedCursor.All(ctx, &occupiedResult); err == nil && len(occupiedResult) > 0 {
-			occupiedCount = occupiedResult[0].OccupiedCount
-		}
-		occupiedCursor.Close(ctx)
-
-		occupancyRate := 0.0
-		if totalCapacity > 0 {
-			occupancyRate = float64(occupiedCount) / float64(totalCapacity) * 100
-		}
-
-		stats = append(stats, StDomOccupancyStats{
-			StDom:         stDom,
-			OccupiedCount: occupiedCount,
-			TotalCapacity: totalCapacity,
-			OccupancyRate: occupancyRate,
-		})
+		roomAvailabilities = append(roomAvailabilities, roomAvailability)
 	}
 
-	// Sort by occupied count (ascending) to get the emptiest
-	// We'll sort in Go since we already have all the data
-	for i := 0; i < len(stats)-1; i++ {
-		for j := i + 1; j < len(stats); j++ {
-			if stats[i].OccupiedCount > stats[j].OccupiedCount {
-				stats[i], stats[j] = stats[j], stats[i]
-			}
-		}
-	}
-
-	// Return top 3
-	if len(stats) > 3 {
-		stats = stats[:3]
-	}
-
-	return stats, nil
+	return roomAvailabilities, nil
 }
 
-// StDomApplicationStats represents application statistics for a student dormitory
-type StDomApplicationStats struct {
-	StDom            models.StDom `json:"st_dom"`
-	ApplicationCount int          `json:"application_count"`
+// getAllDormsMap returns a map of dorm ID to dorm object
+func (s *OpenDataService) getAllDormsMap(ctx context.Context) (map[string]models.StDom, error) {
+	cursor, err := s.stDomsCollection.Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var dorms []models.StDom
+	if err = cursor.All(ctx, &dorms); err != nil {
+		return nil, err
+	}
+
+	dormsMap := make(map[string]models.StDom)
+	for _, dorm := range dorms {
+		dormsMap[dorm.ID.Hex()] = dorm
+	}
+
+	return dormsMap, nil
 }
 
-// GetStDomWithMostApplications returns the student dormitory with the most applications
-func (s *OpenDataService) GetStDomWithMostApplications() (*StDomApplicationStats, error) {
+// ====================
+// 3. Dorm Comparison Tool
+// ====================
+
+// CompareDorms compares multiple dorms side-by-side
+func (s *OpenDataService) CompareDorms(dormIDs []string) (*models.DormComparison, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Aggregation pipeline to count active applications per st_dom
+	var dormOIDs []primitive.ObjectID
+	for _, idStr := range dormIDs {
+		oid, err := primitive.ObjectIDFromHex(idStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid dorm_id: %s", idStr)
+		}
+		dormOIDs = append(dormOIDs, oid)
+	}
+
+	// Get dorms
+	cursor, err := s.stDomsCollection.Find(ctx, bson.M{"_id": bson.M{"$in": dormOIDs}})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var dorms []models.StDom
+	if err = cursor.All(ctx, &dorms); err != nil {
+		return nil, err
+	}
+
+	var comparisonDetails []models.DormComparisonDetail
+
+	for _, dorm := range dorms {
+		detail := models.DormComparisonDetail{
+			DormID:   dorm.ID,
+			DormName: dorm.Ime,
+			Address:  dorm.Address,
+			ContactInfo: models.ContactInfo{
+				Phone: dorm.TelephoneNumber,
+				Email: dorm.Email,
+			},
+			RoomDistribution: make(map[int]int),
+			AmenitiesOffered: make(map[string]int),
+		}
+
+		// Get rooms for this dorm
+		roomCursor, err := s.sobasCollection.Find(ctx, bson.M{"st_dom_id": dorm.ID})
+		if err != nil {
+			return nil, err
+		}
+
+		var rooms []models.Soba
+		if err = roomCursor.All(ctx, &rooms); err != nil {
+			roomCursor.Close(ctx)
+			return nil, err
+		}
+		roomCursor.Close(ctx)
+
+		// Calculate capacity info
+		totalCapacity := 0
+		for _, room := range rooms {
+			totalCapacity += room.Krevetnost
+			detail.RoomDistribution[room.Krevetnost]++
+
+			for _, amenity := range room.Luksuzi {
+				detail.AmenitiesOffered[amenity]++
+			}
+		}
+
+		detail.Capacity.TotalRooms = len(rooms)
+		detail.Capacity.TotalCapacity = totalCapacity
+
+		// Get occupied spots
+		pipeline := mongo.Pipeline{
+			{{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "sobas"},
+				{Key: "localField", Value: "soba_id"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "room"},
+			}}},
+			{{Key: "$unwind", Value: "$room"}},
+			{{Key: "$match", Value: bson.D{
+				{Key: "room.st_dom_id", Value: dorm.ID},
+			}}},
+			{{Key: "$count", Value: "total"}},
+		}
+
+		occupiedCursor, err := s.prihvaceneAplikacijeCollection.Aggregate(ctx, pipeline)
+		if err != nil {
+			return nil, err
+		}
+
+		var occupiedResult []struct {
+			Total int `bson:"total"`
+		}
+		if err = occupiedCursor.All(ctx, &occupiedResult); err != nil {
+			occupiedCursor.Close(ctx)
+			return nil, err
+		}
+		occupiedCursor.Close(ctx)
+
+		if len(occupiedResult) > 0 {
+			detail.Capacity.OccupiedSpots = occupiedResult[0].Total
+		}
+
+		detail.Capacity.AvailableSpots = detail.Capacity.TotalCapacity - detail.Capacity.OccupiedSpots
+
+		if detail.Capacity.TotalCapacity > 0 {
+			detail.Capacity.OccupancyRate = float64(detail.Capacity.OccupiedSpots) / float64(detail.Capacity.TotalCapacity) * 100
+			detail.Capacity.OccupancyRate = math.Round(detail.Capacity.OccupancyRate*100) / 100
+		}
+
+		// Get application metrics for this dorm
+		appMetrics, err := s.getDormApplicationMetrics(ctx, dorm.ID)
+		if err != nil {
+			return nil, err
+		}
+		detail.ApplicationMetrics = *appMetrics
+
+		comparisonDetails = append(comparisonDetails, detail)
+	}
+
+	return &models.DormComparison{
+		Dorms:          comparisonDetails,
+		ComparisonDate: time.Now(),
+	}, nil
+}
+
+// getDormApplicationMetrics calculates application metrics for a specific dorm
+func (s *OpenDataService) getDormApplicationMetrics(ctx context.Context, dormID primitive.ObjectID) (*models.ApplicationMetrics, error) {
+	metrics := &models.ApplicationMetrics{}
+
+	// Get all applications for rooms in this dorm
 	pipeline := mongo.Pipeline{
-		// Stage 1: Match only active applications
-		bson.D{{Key: "$match", Value: bson.D{{Key: "is_active", Value: true}}}},
-		// Stage 2: Lookup to join aplikacije with sobas to get st_dom_id
-		bson.D{{Key: "$lookup", Value: bson.D{
+		{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "sobas"},
 			{Key: "localField", Value: "soba_id"},
 			{Key: "foreignField", Value: "_id"},
-			{Key: "as", Value: "soba"},
+			{Key: "as", Value: "room"},
 		}}},
-		// Stage 3: Unwind soba array
-		bson.D{{Key: "$unwind", Value: "$soba"}},
-		// Stage 4: Group by st_dom_id and count applications
-		bson.D{{Key: "$group", Value: bson.D{
-			{Key: "_id", Value: "$soba.st_dom_id"},
-			{Key: "application_count", Value: bson.D{{Key: "$sum", Value: 1}}},
+		{{Key: "$unwind", Value: "$room"}},
+		{{Key: "$match", Value: bson.D{
+			{Key: "room.st_dom_id", Value: dormID},
 		}}},
-		// Stage 5: Sort by application_count descending
-		bson.D{{Key: "$sort", Value: bson.D{{Key: "application_count", Value: -1}}}},
-		// Stage 6: Limit to top 1
-		bson.D{{Key: "$limit", Value: 1}},
 	}
 
 	cursor, err := s.aplikacijeCollection.Aggregate(ctx, pipeline)
@@ -604,64 +573,87 @@ func (s *OpenDataService) GetStDomWithMostApplications() (*StDomApplicationStats
 	}
 	defer cursor.Close(ctx)
 
-	var results []struct {
-		ID               primitive.ObjectID `bson:"_id"`
-		ApplicationCount int                `bson:"application_count"`
-	}
-	if err = cursor.All(ctx, &results); err != nil {
+	var applications []models.Aplikacija
+	if err = cursor.All(ctx, &applications); err != nil {
 		return nil, err
 	}
 
-	if len(results) == 0 {
-		return nil, nil
+	metrics.TotalApplications = len(applications)
+
+	// Calculate average grade
+	if len(applications) > 0 {
+		totalGrade := 0
+		for _, app := range applications {
+			totalGrade += app.Prosek
+		}
+		metrics.AverageGrade = float64(totalGrade) / float64(len(applications))
+		metrics.AverageGrade = math.Round(metrics.AverageGrade*100) / 100
 	}
 
-	// Get st_dom details
-	var stDom models.StDom
-	err = s.stDomsCollection.FindOne(ctx, bson.M{"_id": results[0].ID}).Decode(&stDom)
-	if err != nil {
-		return nil, err
-	}
-
-	return &StDomApplicationStats{
-		StDom:            stDom,
-		ApplicationCount: results[0].ApplicationCount,
-	}, nil
-}
-
-// StDomAverageProsekStats represents average prosek statistics for a student dormitory
-type StDomAverageProsekStats struct {
-	StDom         models.StDom `json:"st_dom"`
-	AverageProsek float64      `json:"average_prosek"`
-	ResidentCount int          `json:"resident_count"`
-}
-
-// GetStDomWithHighestAverageProsek returns the student dormitory with the highest average prosek
-func (s *OpenDataService) GetStDomWithHighestAverageProsek() (*StDomAverageProsekStats, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	// Aggregation pipeline to calculate average prosek per st_dom
-	pipeline := mongo.Pipeline{
-		// Stage 1: Lookup to join prihvacena_aplikacije with sobas to get st_dom_id
-		bson.D{{Key: "$lookup", Value: bson.D{
+	// Get accepted applications
+	acceptedPipeline := mongo.Pipeline{
+		{{Key: "$lookup", Value: bson.D{
 			{Key: "from", Value: "sobas"},
 			{Key: "localField", Value: "soba_id"},
 			{Key: "foreignField", Value: "_id"},
-			{Key: "as", Value: "soba"},
+			{Key: "as", Value: "room"},
 		}}},
-		// Stage 2: Unwind soba array
-		bson.D{{Key: "$unwind", Value: "$soba"}},
-		// Stage 3: Group by st_dom_id and calculate average prosek
-		bson.D{{Key: "$group", Value: bson.D{
-			{Key: "_id", Value: "$soba.st_dom_id"},
-			{Key: "average_prosek", Value: bson.D{{Key: "$avg", Value: "$prosek"}}},
-			{Key: "resident_count", Value: bson.D{{Key: "$sum", Value: 1}}},
+		{{Key: "$unwind", Value: "$room"}},
+		{{Key: "$match", Value: bson.D{
+			{Key: "room.st_dom_id", Value: dormID},
 		}}},
-		// Stage 4: Sort by average_prosek descending
-		bson.D{{Key: "$sort", Value: bson.D{{Key: "average_prosek", Value: -1}}}},
-		// Stage 5: Limit to top 1
-		bson.D{{Key: "$limit", Value: 1}},
+		{{Key: "$count", Value: "total"}},
+	}
+
+	acceptedCursor, err := s.prihvaceneAplikacijeCollection.Aggregate(ctx, acceptedPipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer acceptedCursor.Close(ctx)
+
+	var acceptedResult []struct {
+		Total int `bson:"total"`
+	}
+	if err = acceptedCursor.All(ctx, &acceptedResult); err != nil {
+		return nil, err
+	}
+
+	if len(acceptedResult) > 0 {
+		metrics.AcceptedApplications = acceptedResult[0].Total
+	}
+
+	// Calculate acceptance rate
+	if metrics.TotalApplications > 0 {
+		metrics.AcceptanceRate = float64(metrics.AcceptedApplications) / float64(metrics.TotalApplications) * 100
+		metrics.AcceptanceRate = math.Round(metrics.AcceptanceRate*100) / 100
+	}
+
+	return metrics, nil
+}
+
+// ====================
+// 4. Application Trends Analysis
+// ====================
+
+// GetApplicationTrends returns historical trends of applications by academic year
+func (s *OpenDataService) GetApplicationTrends() (*models.ApplicationTrends, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	trends := &models.ApplicationTrends{
+		GeneratedAt: time.Now(),
+	}
+
+	// Get yearly trends from accepted applications (grouped by academic year)
+	pipeline := mongo.Pipeline{
+		{{Key: "$group", Value: bson.D{
+			{Key: "_id", Value: "$academic_year"},
+			{Key: "total", Value: bson.D{{Key: "$sum", Value: 1}}},
+			{Key: "avg_grade", Value: bson.D{{Key: "$avg", Value: "$prosek"}}},
+			{Key: "min_grade", Value: bson.D{{Key: "$min", Value: "$prosek"}}},
+			{Key: "max_grade", Value: bson.D{{Key: "$max", Value: "$prosek"}}},
+		}}},
+		{{Key: "$sort", Value: bson.D{{Key: "_id", Value: 1}}}},
 	}
 
 	cursor, err := s.prihvaceneAplikacijeCollection.Aggregate(ctx, pipeline)
@@ -670,30 +662,490 @@ func (s *OpenDataService) GetStDomWithHighestAverageProsek() (*StDomAverageProse
 	}
 	defer cursor.Close(ctx)
 
-	var results []struct {
-		ID            primitive.ObjectID `bson:"_id"`
-		AverageProsek float64            `bson:"average_prosek"`
-		ResidentCount int                `bson:"resident_count"`
+	var yearlyResults []struct {
+		AcademicYear string  `bson:"_id"`
+		Total        int     `bson:"total"`
+		AvgGrade     float64 `bson:"avg_grade"`
+		MinGrade     int     `bson:"min_grade"`
+		MaxGrade     int     `bson:"max_grade"`
 	}
-	if err = cursor.All(ctx, &results); err != nil {
+
+	if err = cursor.All(ctx, &yearlyResults); err != nil {
 		return nil, err
 	}
 
-	if len(results) == 0 {
-		return nil, nil
+	for _, result := range yearlyResults {
+		// Count total applications for this year (from aplikacije collection)
+		// We need to match applications with accepted ones to find the academic year
+		totalApps, err := s.countApplicationsByYear(ctx, result.AcademicYear)
+		if err != nil {
+			return nil, err
+		}
+
+		yearlyTrend := models.YearlyTrend{
+			AcademicYear:         result.AcademicYear,
+			TotalApplications:    totalApps,
+			AcceptedApplications: result.Total,
+			AverageGrade:         math.Round(result.AvgGrade*100) / 100,
+			MinGrade:             result.MinGrade,
+			MaxGrade:             result.MaxGrade,
+		}
+
+		if totalApps > 0 {
+			yearlyTrend.AcceptanceRate = float64(result.Total) / float64(totalApps) * 100
+			yearlyTrend.AcceptanceRate = math.Round(yearlyTrend.AcceptanceRate*100) / 100
+		}
+
+		trends.YearlyTrends = append(trends.YearlyTrends, yearlyTrend)
 	}
 
-	// Get st_dom details
-	var stDom models.StDom
-	err = s.stDomsCollection.FindOne(ctx, bson.M{"_id": results[0].ID}).Decode(&stDom)
+	// Get per-dorm trends
+	dormTrends, err := s.getDormApplicationTrends(ctx)
+	if err != nil {
+		return nil, err
+	}
+	trends.DormTrends = dormTrends
+
+	// Calculate overall metrics
+	trends.OverallMetrics = s.calculateTrendMetrics(trends.YearlyTrends)
+
+	return trends, nil
+}
+
+// countApplicationsByYear counts total applications for a given academic year
+func (s *OpenDataService) countApplicationsByYear(ctx context.Context, academicYear string) (int, error) {
+	// Since applications don't have academic_year, we estimate based on creation date
+	// This is a simplified approach - in production, you might want to add academic_year to applications
+	
+	// For now, count all applications as an approximation
+	// You could improve this by adding academic_year field to Aplikacija model
+	total, err := s.aplikacijeCollection.CountDocuments(ctx, bson.M{})
+	if err != nil {
+		return 0, err
+	}
+
+	return int(total), nil
+}
+
+// getDormApplicationTrends calculates application trends per dorm
+func (s *OpenDataService) getDormApplicationTrends(ctx context.Context) ([]models.DormApplicationTrend, error) {
+	// Get all dorms
+	dormCursor, err := s.stDomsCollection.Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	defer dormCursor.Close(ctx)
+
+	var dorms []models.StDom
+	if err = dormCursor.All(ctx, &dorms); err != nil {
+		return nil, err
+	}
+
+	var dormTrends []models.DormApplicationTrend
+
+	for _, dorm := range dorms {
+		// Get applications for this dorm
+		pipeline := mongo.Pipeline{
+			{{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "sobas"},
+				{Key: "localField", Value: "soba_id"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "room"},
+			}}},
+			{{Key: "$unwind", Value: "$room"}},
+			{{Key: "$match", Value: bson.D{
+				{Key: "room.st_dom_id", Value: dorm.ID},
+			}}},
+			{{Key: "$count", Value: "total"}},
+		}
+
+		cursor, err := s.aplikacijeCollection.Aggregate(ctx, pipeline)
+		if err != nil {
+			return nil, err
+		}
+
+		var appResult []struct {
+			Total int `bson:"total"`
+		}
+		if err = cursor.All(ctx, &appResult); err != nil {
+			cursor.Close(ctx)
+			return nil, err
+		}
+		cursor.Close(ctx)
+
+		totalApps := 0
+		if len(appResult) > 0 {
+			totalApps = appResult[0].Total
+		}
+
+		// Get accepted applications
+		acceptedCursor, err := s.prihvaceneAplikacijeCollection.Aggregate(ctx, pipeline)
+		if err != nil {
+			return nil, err
+		}
+
+		var acceptedResult []struct {
+			Total int `bson:"total"`
+		}
+		if err = acceptedCursor.All(ctx, &acceptedResult); err != nil {
+			acceptedCursor.Close(ctx)
+			return nil, err
+		}
+		acceptedCursor.Close(ctx)
+
+		acceptedApps := 0
+		if len(acceptedResult) > 0 {
+			acceptedApps = acceptedResult[0].Total
+		}
+
+		trend := models.DormApplicationTrend{
+			DormID:               dorm.ID,
+			DormName:             dorm.Ime,
+			TotalApplications:    totalApps,
+			AcceptedApplications: acceptedApps,
+		}
+
+		if totalApps > 0 {
+			trend.AcceptanceRate = float64(acceptedApps) / float64(totalApps) * 100
+			trend.AcceptanceRate = math.Round(trend.AcceptanceRate*100) / 100
+		}
+
+		dormTrends = append(dormTrends, trend)
+	}
+
+	return dormTrends, nil
+}
+
+// calculateTrendMetrics calculates overall trend metrics
+func (s *OpenDataService) calculateTrendMetrics(yearlyTrends []models.YearlyTrend) models.TrendMetrics {
+	metrics := models.TrendMetrics{
+		TotalYears:      len(yearlyTrends),
+		TrendDirection:  "stable",
+	}
+
+	if len(yearlyTrends) == 0 {
+		return metrics
+	}
+
+	// Calculate average applications per year
+	totalApps := 0
+	for _, trend := range yearlyTrends {
+		totalApps += trend.TotalApplications
+	}
+	metrics.AverageApplicationsPerYear = totalApps / len(yearlyTrends)
+
+	// Determine trend direction (simple comparison of first and last year)
+	if len(yearlyTrends) > 1 {
+		first := float64(yearlyTrends[0].TotalApplications)
+		last := float64(yearlyTrends[len(yearlyTrends)-1].TotalApplications)
+
+		if last > first*1.1 { // 10% increase
+			metrics.TrendDirection = "increasing"
+		} else if last < first*0.9 { // 10% decrease
+			metrics.TrendDirection = "decreasing"
+		}
+	}
+
+	return metrics
+}
+
+// ====================
+// 5. Real-time Occupancy Heatmap
+// ====================
+
+// GetOccupancyHeatmap returns real-time occupancy data for visualization
+func (s *OpenDataService) GetOccupancyHeatmap() (*models.OccupancyHeatmap, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	heatmap := &models.OccupancyHeatmap{
+		GeneratedAt: time.Now(),
+	}
+
+	// Get all dorms
+	cursor, err := s.stDomsCollection.Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var dorms []models.StDom
+	if err = cursor.All(ctx, &dorms); err != nil {
+		return nil, err
+	}
+
+	var points []models.DormOccupancyPoint
+	var occupancyRates []float64
+
+	for _, dorm := range dorms {
+		point := models.DormOccupancyPoint{
+			DormID:   dorm.ID,
+			DormName: dorm.Ime,
+			Address:  dorm.Address,
+		}
+
+		// Get total capacity
+		pipeline := mongo.Pipeline{
+			{{Key: "$match", Value: bson.D{{Key: "st_dom_id", Value: dorm.ID}}}},
+			{{Key: "$group", Value: bson.D{
+				{Key: "_id", Value: nil},
+				{Key: "total_capacity", Value: bson.D{{Key: "$sum", Value: "$krevetnost"}}},
+			}}},
+		}
+
+		capacityCursor, err := s.sobasCollection.Aggregate(ctx, pipeline)
+		if err != nil {
+			return nil, err
+		}
+
+		var capacityResult []struct {
+			TotalCapacity int `bson:"total_capacity"`
+		}
+		if err = capacityCursor.All(ctx, &capacityResult); err != nil {
+			capacityCursor.Close(ctx)
+			return nil, err
+		}
+		capacityCursor.Close(ctx)
+
+		if len(capacityResult) > 0 {
+			point.TotalCapacity = capacityResult[0].TotalCapacity
+		}
+
+		// Get occupied spots
+		occupiedPipeline := mongo.Pipeline{
+			{{Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "sobas"},
+				{Key: "localField", Value: "soba_id"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "room"},
+			}}},
+			{{Key: "$unwind", Value: "$room"}},
+			{{Key: "$match", Value: bson.D{
+				{Key: "room.st_dom_id", Value: dorm.ID},
+			}}},
+			{{Key: "$count", Value: "total"}},
+		}
+
+		occupiedCursor, err := s.prihvaceneAplikacijeCollection.Aggregate(ctx, occupiedPipeline)
+		if err != nil {
+			return nil, err
+		}
+
+		var occupiedResult []struct {
+			Total int `bson:"total"`
+		}
+		if err = occupiedCursor.All(ctx, &occupiedResult); err != nil {
+			occupiedCursor.Close(ctx)
+			return nil, err
+		}
+		occupiedCursor.Close(ctx)
+
+		if len(occupiedResult) > 0 {
+			point.OccupiedSpots = occupiedResult[0].Total
+		}
+
+		point.AvailableSpots = point.TotalCapacity - point.OccupiedSpots
+
+		// Calculate occupancy rate
+		if point.TotalCapacity > 0 {
+			point.OccupancyRate = float64(point.OccupiedSpots) / float64(point.TotalCapacity) * 100
+			point.OccupancyRate = math.Round(point.OccupancyRate*100) / 100
+			occupancyRates = append(occupancyRates, point.OccupancyRate)
+		}
+
+		// Determine status
+		if point.OccupancyRate >= 80 {
+			point.Status = "high"
+		} else if point.OccupancyRate >= 50 {
+			point.Status = "medium"
+		} else {
+			point.Status = "low"
+		}
+
+		points = append(points, point)
+	}
+
+	heatmap.Dorms = points
+
+	// Calculate summary
+	heatmap.Summary = s.calculateOccupancySummary(points, occupancyRates)
+
+	return heatmap, nil
+}
+
+// calculateOccupancySummary calculates summary statistics for occupancy
+func (s *OpenDataService) calculateOccupancySummary(points []models.DormOccupancyPoint, rates []float64) models.OccupancySummary {
+	summary := models.OccupancySummary{}
+
+	if len(rates) == 0 {
+		return summary
+	}
+
+	// Calculate average
+	total := 0.0
+	for _, rate := range rates {
+		total += rate
+	}
+	summary.AverageOccupancy = math.Round((total/float64(len(rates)))*100) / 100
+
+	// Find highest and lowest
+	sort.Float64s(rates)
+	summary.LowestOccupancy = rates[0]
+	summary.HighestOccupancy = rates[len(rates)-1]
+
+	// Count full and empty dorms
+	for _, point := range points {
+		if point.OccupancyRate >= 100 {
+			summary.FullDorms++
+		}
+		if point.OccupancyRate == 0 {
+			summary.EmptyDorms++
+		}
+	}
+
+	return summary
+}
+
+// ====================
+// 6. Open Data Export (CSV/JSON)
+// ====================
+
+// ExportData exports data in CSV or JSON format
+func (s *OpenDataService) ExportData(dataset string, format models.ExportFormat) (interface{}, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	switch dataset {
+	case "dorms":
+		return s.exportDorms(ctx, format)
+	case "rooms":
+		return s.exportRooms(ctx, format)
+	case "statistics":
+		return s.exportStatistics(ctx, format)
+	default:
+		return nil, fmt.Errorf("unknown dataset: %s", dataset)
+	}
+}
+
+// exportDorms exports dorm data
+func (s *OpenDataService) exportDorms(ctx context.Context, format models.ExportFormat) (interface{}, error) {
+	cursor, err := s.stDomsCollection.Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var dorms []models.StDom
+	if err = cursor.All(ctx, &dorms); err != nil {
+		return nil, err
+	}
+
+	if format == models.ExportFormatJSON {
+		return dorms, nil
+	}
+
+	// CSV format
+	var csvData [][]string
+	csvData = append(csvData, []string{"ID", "Name", "Address", "Phone", "Email", "Created At"})
+
+	for _, dorm := range dorms {
+		csvData = append(csvData, []string{
+			dorm.ID.Hex(),
+			dorm.Ime,
+			dorm.Address,
+			dorm.TelephoneNumber,
+			dorm.Email,
+			dorm.CreatedAt.Format(time.RFC3339),
+		})
+	}
+
+	return csvData, nil
+}
+
+// exportRooms exports room data with availability
+func (s *OpenDataService) exportRooms(ctx context.Context, format models.ExportFormat) (interface{}, error) {
+	// Get rooms with availability data
+	rooms, err := s.SearchAvailableRooms(models.RoomSearchFilters{Limit: 1000})
 	if err != nil {
 		return nil, err
 	}
 
-	return &StDomAverageProsekStats{
-		StDom:         stDom,
-		AverageProsek: results[0].AverageProsek,
-		ResidentCount: results[0].ResidentCount,
-	}, nil
+	if format == models.ExportFormatJSON {
+		return rooms, nil
+	}
+
+	// CSV format
+	var csvData [][]string
+	csvData = append(csvData, []string{"Room ID", "Dorm ID", "Dorm Name", "Capacity", "Occupied", "Available", "Amenities", "Is Available"})
+
+	for _, room := range rooms {
+		csvData = append(csvData, []string{
+			room.RoomID.Hex(),
+			room.DormID.Hex(),
+			room.DormName,
+			fmt.Sprintf("%d", room.Capacity),
+			fmt.Sprintf("%d", room.Occupied),
+			fmt.Sprintf("%d", room.AvailableSpots),
+			strings.Join(room.Amenities, ";"),
+			fmt.Sprintf("%t", room.IsAvailable),
+		})
+	}
+
+	return csvData, nil
 }
 
+// exportStatistics exports statistical data
+func (s *OpenDataService) exportStatistics(ctx context.Context, format models.ExportFormat) (interface{}, error) {
+	stats, err := s.GetPublicStatistics()
+	if err != nil {
+		return nil, err
+	}
+
+	if format == models.ExportFormatJSON {
+		return stats, nil
+	}
+
+	// CSV format - export dorm statistics
+	var csvData [][]string
+	csvData = append(csvData, []string{"Dorm Name", "Address", "Total Rooms", "Total Capacity", "Occupied", "Available", "Occupancy Rate"})
+
+	for _, dormStat := range stats.DormStatistics {
+		csvData = append(csvData, []string{
+			dormStat.DormName,
+			dormStat.Address,
+			fmt.Sprintf("%d", dormStat.TotalRooms),
+			fmt.Sprintf("%d", dormStat.TotalCapacity),
+			fmt.Sprintf("%d", dormStat.OccupiedSpots),
+			fmt.Sprintf("%d", dormStat.AvailableSpots),
+			fmt.Sprintf("%.2f", dormStat.OccupancyRate),
+		})
+	}
+
+	return csvData, nil
+}
+
+// FormatCSV formats CSV data to string
+func FormatCSV(data [][]string) (string, error) {
+	var builder strings.Builder
+	writer := csv.NewWriter(&builder)
+
+	if err := writer.WriteAll(data); err != nil {
+		return "", err
+	}
+
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		return "", err
+	}
+
+	return builder.String(), nil
+}
+
+// FormatJSON formats data to JSON string
+func FormatJSON(data interface{}) (string, error) {
+	jsonData, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	return string(jsonData), nil
+}

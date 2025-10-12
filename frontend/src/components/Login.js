@@ -83,6 +83,22 @@ const Login = () => {
             Nemate račun? <Link to="/register">Registrirajte se</Link>
           </p>
         </div>
+
+        <div className="open-data-section">
+          <div className="divider">
+            <span>ili</span>
+          </div>
+          <button 
+            type="button" 
+            onClick={() => navigate('/open-data')}
+            className="open-data-access-button"
+          >
+            📊 Pristupite otvorenim podacima
+          </button>
+          <p className="open-data-description">
+            Pregledajte javne statistike i podatke o studentskim domovima bez prijavljivanja
+          </p>
+        </div>
       </div>
     </div>
   );
