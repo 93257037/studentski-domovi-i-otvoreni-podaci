@@ -7,6 +7,8 @@ import ApplyForRoomModal from './ApplyForRoomModal';
 import ManageApplicationsModal from './ManageApplicationsModal';
 import ManageRoomsModal from './ManageRoomsModal';
 import MyRoomInfo from './MyRoomInfo';
+import ScheduleRepairModal from './ScheduleRepairModal';
+import ManageRepairsModal from './ManageRepairsModal';
 import { openDataService } from '../services/openDataService';
 import './Dashboard.css';
 
@@ -21,6 +23,8 @@ const Dashboard = () => {
   const [showApplyForRoomModal, setShowApplyForRoomModal] = useState(false);
   const [showManageApplicationsModal, setShowManageApplicationsModal] = useState(false);
   const [showManageRoomsModal, setShowManageRoomsModal] = useState(false);
+  const [showScheduleRepairModal, setShowScheduleRepairModal] = useState(false);
+  const [showManageRepairsModal, setShowManageRepairsModal] = useState(false);
   
   const [imeSearch, setImeSearch] = useState('');
   const [addressSearch, setAddressSearch] = useState('');
@@ -271,12 +275,29 @@ const Dashboard = () => {
                 Apliciraj za sobu
               </button>
             )}
-            <button 
-              onClick={() => navigate('/open-data')}
-              className="open-data-button"
-            >
-              📊 Open Data Dashboard
-            </button>
+            {user?.role === 'admin' ? (
+              <>
+                <button 
+                  onClick={() => setShowScheduleRepairModal(true)}
+                  className="schedule-repair-button"
+                >
+                  🔧 Zakaži Popravku
+                </button>
+                <button 
+                  onClick={() => setShowManageRepairsModal(true)}
+                  className="manage-repairs-button"
+                >
+                  🛠️ Upravljaj Popravkama
+                </button>
+              </>
+            ) : (
+              <button 
+                onClick={() => navigate('/open-data')}
+                className="open-data-button"
+              >
+                📊 Open Data Dashboard
+              </button>
+            )}
             <button 
               onClick={() => setShowDeleteModal(true)}
               className="delete-account-button"
@@ -349,6 +370,17 @@ const Dashboard = () => {
         isOpen={showManageRoomsModal}
         onClose={() => setShowManageRoomsModal(false)}
         onSuccess={handleManageRoomsSuccess}
+      />
+
+      <ScheduleRepairModal
+        show={showScheduleRepairModal}
+        onClose={() => setShowScheduleRepairModal(false)}
+        token={user?.token}
+      />
+
+      <ManageRepairsModal
+        show={showManageRepairsModal}
+        onClose={() => setShowManageRepairsModal(false)}
       />
     </div>
   );

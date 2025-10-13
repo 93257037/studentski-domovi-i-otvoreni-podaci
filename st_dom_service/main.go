@@ -39,17 +39,19 @@ func main() {
 	aplikacijaService := services.NewAplikacijaService(aplikacijeCollection)
 	paymentService := services.NewPaymentService(paymentsCollection)
 	prihvacenaAplikacijaService := services.NewPrihvacenaAplikacijaService(prihvaceneAplikacijeCollection, aplikacijaService, paymentService)
+	repairService := services.NewRepairService(db.GetDatabase())
 
 	stDomHandler := handlers.NewStDomHandler(stDomService, sobaService)
 	sobaHandler := handlers.NewSobaHandler(sobaService, stDomService)
 	aplikacijaHandler := handlers.NewAplikacijaHandler(aplikacijaService, sobaService)
 	prihvacenaAplikacijaHandler := handlers.NewPrihvacenaAplikacijaHandler(prihvacenaAplikacijaService)
 	paymentHandler := handlers.NewPaymentHandler(paymentService, aplikacijaService, sobaService)
+	repairHandler := handlers.NewRepairHandler(repairService)
 	healthHandler := handlers.NewHealthHandler()
 
 	router := gin.Default()
 
-	routes.SetupRoutes(router, stDomHandler, sobaHandler, aplikacijaHandler, prihvacenaAplikacijaHandler, paymentHandler, healthHandler, cfg.JWTSecret)
+	routes.SetupRoutes(router, stDomHandler, sobaHandler, aplikacijaHandler, prihvacenaAplikacijaHandler, paymentHandler, repairHandler, healthHandler, cfg.JWTSecret)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := router.Run(":" + cfg.Port); err != nil {

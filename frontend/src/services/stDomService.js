@@ -244,6 +244,55 @@ class StDomService {
   async getPaymentsByAplikacija(aplikacijaId) {
     return this.makeRequest(`/payments/aplikacija/${aplikacijaId}`);
   }
+
+  // endpoint-i za popravke (repairs)
+
+  // zakazuje novu popravku (samo admin)
+  async scheduleRepair(roomId, description, estimatedCompletionDate) {
+    return this.makeRequest('/repairs/', {
+      method: 'POST',
+      body: JSON.stringify({
+        soba_id: roomId,
+        description: description,
+        estimated_completion_date: estimatedCompletionDate,
+      }),
+    });
+  }
+
+  // dobija sve popravke (samo admin)
+  async getAllRepairs() {
+    return this.makeRequest('/repairs/');
+  }
+
+  // dobija popravke po sobi (samo admin)
+  async getRepairsByRoom(roomId) {
+    return this.makeRequest(`/repairs/room/${roomId}`);
+  }
+
+  // dobija popravku po ID-u (samo admin)
+  async getRepair(repairId) {
+    return this.makeRequest(`/repairs/${repairId}`);
+  }
+
+  // dobija popravke po statusu (samo admin)
+  async getRepairsByStatus(status) {
+    return this.makeRequest(`/repairs/status/${status}`);
+  }
+
+  // azurira popravku (samo admin)
+  async updateRepair(repairId, repairData) {
+    return this.makeRequest(`/repairs/${repairId}`, {
+      method: 'PUT',
+      body: JSON.stringify(repairData),
+    });
+  }
+
+  // brise popravku (samo admin)
+  async deleteRepair(repairId) {
+    return this.makeRequest(`/repairs/${repairId}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const stDomService = new StDomService();

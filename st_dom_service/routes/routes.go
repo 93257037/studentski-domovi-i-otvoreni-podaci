@@ -8,7 +8,7 @@ import (
 )
 
 // SetupRoutes configures all routes for the application
-func SetupRoutes(r *gin.Engine, stDomHandler *handlers.StDomHandler, sobaHandler *handlers.SobaHandler, aplikacijaHandler *handlers.AplikacijaHandler, prihvacenaAplikacijaHandler *handlers.PrihvacenaAplikacijaHandler, paymentHandler *handlers.PaymentHandler, healthHandler *handlers.HealthHandler, jwtSecret string) {
+func SetupRoutes(r *gin.Engine, stDomHandler *handlers.StDomHandler, sobaHandler *handlers.SobaHandler, aplikacijaHandler *handlers.AplikacijaHandler, prihvacenaAplikacijaHandler *handlers.PrihvacenaAplikacijaHandler, paymentHandler *handlers.PaymentHandler, repairHandler *handlers.RepairHandler, healthHandler *handlers.HealthHandler, jwtSecret string) {
 	// Add CORS middleware
 	r.Use(middleware.CORSMiddleware())
 
@@ -132,6 +132,18 @@ func SetupRoutes(r *gin.Engine, stDomHandler *handlers.StDomHandler, sobaHandler
 				adminPayments.PATCH("/:id/mark-unpaid", paymentHandler.MarkPaymentAsUnpaid)    // Mark payment as unpaid
 				adminPayments.DELETE("/:id", paymentHandler.DeletePayment)                     // Delete payment
 				adminPayments.POST("/update-overdue", paymentHandler.UpdateOverduePayments)    // Update overdue payments
+			}
+
+			// Admin repair routes
+			adminRepairs := admin.Group("/repairs")
+			{
+				adminRepairs.POST("/", repairHandler.CreateRepair)                          // Schedule a repair
+				adminRepairs.GET("/", repairHandler.GetAllRepairs)                          // Get all repairs
+				adminRepairs.GET("/:id", repairHandler.GetRepair)                           // Get repair by ID
+				adminRepairs.GET("/room/:roomId", repairHandler.GetRepairsByRoom)           // Get repairs by room
+				adminRepairs.GET("/status/:status", repairHandler.GetRepairsByStatus)       // Get repairs by status
+				adminRepairs.PUT("/:id", repairHandler.UpdateRepair)                        // Update repair
+				adminRepairs.DELETE("/:id", repairHandler.DeleteRepair)                     // Delete repair
 			}
 		}
 	}
