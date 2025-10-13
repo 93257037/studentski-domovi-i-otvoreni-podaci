@@ -33,6 +33,7 @@ func main() {
 	sobasCollection := db.GetCollection("sobas")
 	aplikacijeCollection := db.GetCollection("aplikacije")
 	prihvaceneAplikacijeCollection := db.GetCollection("prihvacene_aplikacije")
+	repairsCollection := db.GetCollection("repairs")
 
 	// Create services
 	openDataService := services.NewOpenDataService(
@@ -40,6 +41,7 @@ func main() {
 		sobasCollection,
 		aplikacijeCollection,
 		prihvaceneAplikacijeCollection,
+		repairsCollection,
 	)
 
 	// Create handlers

@@ -338,6 +338,14 @@ class OpenDataService {
       average_prosek: stats.statistics.application_statistics.average_grade_of_accepted
     };
   }
+
+  /**
+   * Get active repairs (pending and in-progress)
+   * @returns {Promise} Active repairs data
+   */
+  async getActiveRepairs() {
+    return this.makeRequest('/open-data/repairs/active');
+  }
 }
 
 export const openDataService = new OpenDataService();

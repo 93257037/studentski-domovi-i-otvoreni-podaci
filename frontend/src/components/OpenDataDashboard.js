@@ -41,6 +41,9 @@ const OpenDataDashboard = () => {
   const [yearApplications, setYearApplications] = useState([]);
   const [hasSearchedYear, setHasSearchedYear] = useState(false);
 
+  // Repairs
+  const [repairs, setRepairs] = useState([]);
+
   // Load initial data
   useEffect(() => {
     loadInitialData();
@@ -88,6 +91,10 @@ const OpenDataDashboard = () => {
             const data = await openDataService.getOccupancyHeatmap();
             setHeatmapData(data.heatmap);
           }
+          break;
+        case 'repairs':
+          const repairsData = await openDataService.getActiveRepairs();
+          setRepairs(repairsData.repairs || []);
           break;
         default:
           break;
@@ -765,6 +772,12 @@ const OpenDataDashboard = () => {
         >
           📚 Prijave po godini
         </button>
+        <button
+          className={activeTab === 'repairs' ? 'active' : ''}
+          onClick={() => setActiveTab('repairs')}
+        >
+          🔧 Popravke
+        </button>
       </nav>
 
       <div className="dashboard-content">
@@ -778,11 +791,121 @@ const OpenDataDashboard = () => {
             {activeTab === 'trends' && renderTrends()}
             {activeTab === 'heatmap' && renderHeatmap()}
             {activeTab === 'academic-year' && renderAcademicYearApplications()}
+            {activeTab === 'repairs' && renderRepairs()}
           </>
         )}
       </div>
     </div>
   );
+
+  function renderRepairs() {
+    const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('sr-RS', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+    const getStatusLabel = (status) => {
+      switch (status) {
+        case 'scheduled':
+          return 'Zakazano';
+        case 'in_progress':
+          return 'U Toku';
+        default:
+          return status;
+      }
+    };
+
+    return (
+    <div className="repairs-container">
+      <h2>Aktivne Popravke</h2>
+      <p className="section-description">
+        Pregled svih zakazanih i trenutnih popravki u studentskim domovima
+      </p>
+
+      <div className="export-section">
+        <h3>Izvezi Podatke</h3>
+        <div className="export-buttons">
+          <div className="export-group">
+            <span>Aktivne Popravke:</span>
+            <button 
+              className="btn btn-secondary"
+              onClick={() => handleExport('active-repairs', 'csv')}
+            >
+              Izvezi CSV
+            </button>
+            <button 
+              className="btn btn-secondary"
+              onClick={() => handleExport('active-repairs', 'json')}
+            >
+              Izvezi JSON
+            </button>
+          </div>
+          <div className="export-group">
+            <span>Završene Popravke (ove godine):</span>
+            <button 
+              className="btn btn-secondary"
+              onClick={() => handleExport('completed-repairs', 'csv')}
+            >
+              Izvezi CSV
+            </button>
+            <button 
+              className="btn btn-secondary"
+              onClick={() => handleExport('completed-repairs', 'json')}
+            >
+              Izvezi JSON
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {repairs.length === 0 ? (
+        <div className="no-results">
+          <p>Trenutno nema aktivnih popravki.</p>
+        </div>
+      ) : (
+        <div className="table-container">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>ID Sobe</th>
+                  <th>Ime Doma</th>
+                  <th>Kapacitet Sobe</th>
+                  <th>Opis</th>
+                  <th>Predviđeni Datum Završetka</th>
+                  <th>Status</th>
+                  <th>Datum Kreiranja</th>
+                </tr>
+              </thead>
+              <tbody>
+                {repairs.map((repair, index) => (
+                  <tr key={index}>
+                    <td><code>{repair.soba_id?._id || repair.soba_id}</code></td>
+                    <td>{repair.dorm?.ime || 'N/A'}</td>
+                    <td>{repair.room?.krevetnost || 'N/A'}</td>
+                    <td className="description-cell">{repair.description}</td>
+                    <td>{formatDate(repair.estimated_completion_date)}</td>
+                    <td>
+                      <span className={`status-badge status-${repair.status}`}>
+                        {getStatusLabel(repair.status)}
+                      </span>
+                    </td>
+                    <td>{formatDate(repair.created_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  }
 };
 
 export default OpenDataDashboard;

@@ -333,3 +333,18 @@ func (h *OpenDataHandler) GetAvailableAmenities(c *gin.Context) {
 		"count":     len(amenities),
 	})
 }
+
+// GetActiveRepairs fetches all pending and in-progress repairs from st_dom_service
+// GET /api/v1/open-data/repairs/active
+func (h *OpenDataHandler) GetActiveRepairs(c *gin.Context) {
+	repairs, err := h.openDataService.GetActiveRepairsFromStDomService()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"repairs": repairs,
+		"count":   len(repairs),
+	})
+}

@@ -52,6 +52,9 @@ func SetupRoutes(
 
 			// Helper endpoints
 			openData.GET("/amenities", openDataHandler.GetAvailableAmenities)
+			
+			// 9. Repairs (proxies to st_dom_service)
+			openData.GET("/repairs/active", openDataHandler.GetActiveRepairs)
 		}
 	}
 }

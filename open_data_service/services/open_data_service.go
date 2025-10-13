@@ -26,6 +26,7 @@ type OpenDataService struct {
 	sobasCollection                *mongo.Collection
 	aplikacijeCollection           *mongo.Collection
 	prihvaceneAplikacijeCollection *mongo.Collection
+	repairsCollection              *mongo.Collection
 }
 
 // NewOpenDataService creates a new OpenDataService
@@ -34,12 +35,14 @@ func NewOpenDataService(
 	sobasCollection *mongo.Collection,
 	aplikacijeCollection *mongo.Collection,
 	prihvaceneAplikacijeCollection *mongo.Collection,
+	repairsCollection *mongo.Collection,
 ) *OpenDataService {
 	return &OpenDataService{
 		stDomsCollection:               stDomsCollection,
 		sobasCollection:                sobasCollection,
 		aplikacijeCollection:           aplikacijeCollection,
 		prihvaceneAplikacijeCollection: prihvaceneAplikacijeCollection,
+		repairsCollection:              repairsCollection,
 	}
 }
 
@@ -1075,6 +1078,10 @@ func (s *OpenDataService) ExportData(dataset string, format models.ExportFormat)
 		return s.exportOccupancyReport(ctx, format)
 	case "room-types":
 		return s.exportRoomTypes(ctx, format)
+	case "active-repairs":
+		return s.exportActiveRepairs(format)
+	case "completed-repairs":
+		return s.exportCompletedRepairs(format)
 	default:
 		return nil, fmt.Errorf("unknown dataset: %s", dataset)
 	}
@@ -1754,6 +1761,397 @@ func (s *OpenDataService) exportRoomTypes(ctx context.Context, format models.Exp
 	}
 
 	return csvData, nil
+}
+
+// exportActiveRepairs exports all pending and in-progress repairs with room info
+func (s *OpenDataService) exportActiveRepairs(format models.ExportFormat) (interface{}, error) {
+	repairs, err := s.GetActiveRepairsFromStDomService()
+	if err != nil {
+		return nil, err
+	}
+
+	if format == models.ExportFormatJSON {
+		// Format for JSON export
+		var jsonData []map[string]interface{}
+		for _, repair := range repairs {
+			// Extract room ID
+			roomID := ""
+			if val, ok := repair["soba_id"].(primitive.ObjectID); ok {
+				roomID = val.Hex()
+			}
+
+			// Extract dorm name
+			dormName := ""
+			if dorm, ok := repair["dorm"].(primitive.M); ok {
+				if name, ok := dorm["ime"].(string); ok {
+					dormName = name
+				}
+			}
+
+			// Extract room capacity (krevetnost)
+			roomCapacity := ""
+			if room, ok := repair["room"].(primitive.M); ok {
+				if krevetnost, ok := room["krevetnost"].(int32); ok {
+					roomCapacity = fmt.Sprintf("%d", krevetnost)
+				} else if krevetnost, ok := room["krevetnost"].(int64); ok {
+					roomCapacity = fmt.Sprintf("%d", krevetnost)
+				} else if krevetnost, ok := room["krevetnost"].(int); ok {
+					roomCapacity = fmt.Sprintf("%d", krevetnost)
+				}
+			}
+
+			// Format dates
+			estimatedDate := ""
+			if val, ok := repair["estimated_completion_date"].(primitive.DateTime); ok {
+				estimatedDate = val.Time().Format("2006-01-02")
+			}
+			createdAt := ""
+			if val, ok := repair["created_at"].(primitive.DateTime); ok {
+				createdAt = val.Time().Format("2006-01-02 15:04:05")
+			}
+
+			// Translate status
+			status := ""
+			if val, ok := repair["status"].(string); ok {
+				switch val {
+				case "scheduled":
+					status = "Zakazano"
+				case "in_progress":
+					status = "U Toku"
+				default:
+					status = val
+				}
+			}
+
+			jsonData = append(jsonData, map[string]interface{}{
+				"ID Sobe":                     roomID,
+				"Ime Doma":                    dormName,
+				"Kapacitet Sobe":              roomCapacity,
+				"Opis":                        repair["description"],
+				"Predviđeni Datum Završetka": estimatedDate,
+				"Status":                      status,
+				"Datum Kreiranja":             createdAt,
+			})
+		}
+		return jsonData, nil
+	}
+
+	// CSV format
+	csvData := [][]string{
+		{"ID Sobe", "Ime Doma", "Kapacitet Sobe", "Opis", "Predviđeni Datum Završetka", "Status", "Datum Kreiranja"},
+	}
+
+	for _, repair := range repairs {
+		// Extract room ID
+		roomID := ""
+		if val, ok := repair["soba_id"].(primitive.ObjectID); ok {
+			roomID = val.Hex()
+		}
+
+		// Extract dorm name
+		dormName := ""
+		if dorm, ok := repair["dorm"].(primitive.M); ok {
+			if name, ok := dorm["ime"].(string); ok {
+				dormName = name
+			}
+		}
+
+		// Extract room capacity (krevetnost)
+		roomCapacity := ""
+		if room, ok := repair["room"].(primitive.M); ok {
+			if krevetnost, ok := room["krevetnost"].(int32); ok {
+				roomCapacity = fmt.Sprintf("%d", krevetnost)
+			} else if krevetnost, ok := room["krevetnost"].(int64); ok {
+				roomCapacity = fmt.Sprintf("%d", krevetnost)
+			} else if krevetnost, ok := room["krevetnost"].(int); ok {
+				roomCapacity = fmt.Sprintf("%d", krevetnost)
+			}
+		}
+
+		// Extract description
+		description := ""
+		if val, ok := repair["description"].(string); ok {
+			description = val
+		}
+
+		// Format dates
+		estimatedDate := ""
+		if val, ok := repair["estimated_completion_date"].(primitive.DateTime); ok {
+			estimatedDate = val.Time().Format("2006-01-02")
+		}
+		createdAt := ""
+		if val, ok := repair["created_at"].(primitive.DateTime); ok {
+			createdAt = val.Time().Format("2006-01-02 15:04:05")
+		}
+
+		// Translate status
+		status := ""
+		if val, ok := repair["status"].(string); ok {
+			switch val {
+			case "scheduled":
+				status = "Zakazano"
+			case "in_progress":
+				status = "U Toku"
+			default:
+				status = val
+			}
+		}
+
+		csvData = append(csvData, []string{roomID, dormName, roomCapacity, description, estimatedDate, status, createdAt})
+	}
+
+	return csvData, nil
+}
+
+// exportCompletedRepairs exports all completed repairs from this year with room info
+func (s *OpenDataService) exportCompletedRepairs(format models.ExportFormat) (interface{}, error) {
+	repairs, err := s.GetCompletedRepairsThisYearFromStDomService()
+	if err != nil {
+		return nil, err
+	}
+
+	if format == models.ExportFormatJSON {
+		// Format for JSON export
+		var jsonData []map[string]interface{}
+		for _, repair := range repairs {
+			// Extract room ID
+			roomID := ""
+			if val, ok := repair["soba_id"].(primitive.ObjectID); ok {
+				roomID = val.Hex()
+			}
+
+			// Extract dorm name
+			dormName := ""
+			if dorm, ok := repair["dorm"].(primitive.M); ok {
+				if name, ok := dorm["ime"].(string); ok {
+					dormName = name
+				}
+			}
+
+			// Extract room capacity (krevetnost)
+			roomCapacity := ""
+			if room, ok := repair["room"].(primitive.M); ok {
+				if krevetnost, ok := room["krevetnost"].(int32); ok {
+					roomCapacity = fmt.Sprintf("%d", krevetnost)
+				} else if krevetnost, ok := room["krevetnost"].(int64); ok {
+					roomCapacity = fmt.Sprintf("%d", krevetnost)
+				} else if krevetnost, ok := room["krevetnost"].(int); ok {
+					roomCapacity = fmt.Sprintf("%d", krevetnost)
+				}
+			}
+
+			// Format dates
+			estimatedDate := ""
+			if val, ok := repair["estimated_completion_date"].(primitive.DateTime); ok {
+				estimatedDate = val.Time().Format("2006-01-02")
+			}
+			createdAt := ""
+			if val, ok := repair["created_at"].(primitive.DateTime); ok {
+				createdAt = val.Time().Format("2006-01-02 15:04:05")
+			}
+			updatedAt := ""
+			if val, ok := repair["updated_at"].(primitive.DateTime); ok {
+				updatedAt = val.Time().Format("2006-01-02 15:04:05")
+			}
+
+			jsonData = append(jsonData, map[string]interface{}{
+				"ID Sobe":                     roomID,
+				"Ime Doma":                    dormName,
+				"Kapacitet Sobe":              roomCapacity,
+				"Opis":                        repair["description"],
+				"Predviđeni Datum Završetka": estimatedDate,
+				"Datum Kreiranja":             createdAt,
+				"Datum Završavanja":           updatedAt,
+			})
+		}
+		return jsonData, nil
+	}
+
+	// CSV format
+	csvData := [][]string{
+		{"ID Sobe", "Ime Doma", "Kapacitet Sobe", "Opis", "Predviđeni Datum Završetka", "Datum Kreiranja", "Datum Završavanja"},
+	}
+
+	for _, repair := range repairs {
+		// Extract room ID
+		roomID := ""
+		if val, ok := repair["soba_id"].(primitive.ObjectID); ok {
+			roomID = val.Hex()
+		}
+
+		// Extract dorm name
+		dormName := ""
+		if dorm, ok := repair["dorm"].(primitive.M); ok {
+			if name, ok := dorm["ime"].(string); ok {
+				dormName = name
+			}
+		}
+
+		// Extract room capacity (krevetnost)
+		roomCapacity := ""
+		if room, ok := repair["room"].(primitive.M); ok {
+			if krevetnost, ok := room["krevetnost"].(int32); ok {
+				roomCapacity = fmt.Sprintf("%d", krevetnost)
+			} else if krevetnost, ok := room["krevetnost"].(int64); ok {
+				roomCapacity = fmt.Sprintf("%d", krevetnost)
+			} else if krevetnost, ok := room["krevetnost"].(int); ok {
+				roomCapacity = fmt.Sprintf("%d", krevetnost)
+			}
+		}
+
+		// Extract description
+		description := ""
+		if val, ok := repair["description"].(string); ok {
+			description = val
+		}
+
+		// Format dates
+		estimatedDate := ""
+		if val, ok := repair["estimated_completion_date"].(primitive.DateTime); ok {
+			estimatedDate = val.Time().Format("2006-01-02")
+		}
+		createdAt := ""
+		if val, ok := repair["created_at"].(primitive.DateTime); ok {
+			createdAt = val.Time().Format("2006-01-02 15:04:05")
+		}
+		updatedAt := ""
+		if val, ok := repair["updated_at"].(primitive.DateTime); ok {
+			updatedAt = val.Time().Format("2006-01-02 15:04:05")
+		}
+
+		csvData = append(csvData, []string{roomID, dormName, roomCapacity, description, estimatedDate, createdAt, updatedAt})
+	}
+
+	return csvData, nil
+}
+
+// GetActiveRepairsFromStDomService fetches all pending and in-progress repairs from MongoDB with room and dorm info
+func (s *OpenDataService) GetActiveRepairsFromStDomService() ([]map[string]interface{}, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Use aggregation to join with rooms and dorms
+	pipeline := []bson.M{
+		{
+			"$match": bson.M{
+				"status": bson.M{
+					"$in": []string{"scheduled", "in_progress"},
+				},
+			},
+		},
+		{
+			"$lookup": bson.M{
+				"from":         "sobas",
+				"localField":   "soba_id",
+				"foreignField": "_id",
+				"as":           "room",
+			},
+		},
+		{
+			"$unwind": bson.M{
+				"path":                       "$room",
+				"preserveNullAndEmptyArrays": true,
+			},
+		},
+		{
+			"$lookup": bson.M{
+				"from":         "st_doms",
+				"localField":   "room.st_dom_id",
+				"foreignField": "_id",
+				"as":           "dorm",
+			},
+		},
+		{
+			"$unwind": bson.M{
+				"path":                       "$dorm",
+				"preserveNullAndEmptyArrays": true,
+			},
+		},
+	}
+
+	cursor, err := s.repairsCollection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch repairs: %v", err)
+	}
+	defer cursor.Close(ctx)
+
+	var repairs []map[string]interface{}
+	for cursor.Next(ctx) {
+		var repair bson.M
+		if err := cursor.Decode(&repair); err != nil {
+			continue
+		}
+		repairs = append(repairs, repair)
+	}
+
+	return repairs, nil
+}
+
+// GetCompletedRepairsThisYearFromStDomService fetches all completed repairs from this year from MongoDB with room and dorm info
+func (s *OpenDataService) GetCompletedRepairsThisYearFromStDomService() ([]map[string]interface{}, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Get start of current year
+	currentYear := time.Now().Year()
+	startOfYear := time.Date(currentYear, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	// Use aggregation to join with rooms and dorms
+	pipeline := []bson.M{
+		{
+			"$match": bson.M{
+				"status": "completed",
+				"created_at": bson.M{
+					"$gte": startOfYear,
+				},
+			},
+		},
+		{
+			"$lookup": bson.M{
+				"from":         "sobas",
+				"localField":   "soba_id",
+				"foreignField": "_id",
+				"as":           "room",
+			},
+		},
+		{
+			"$unwind": bson.M{
+				"path":                       "$room",
+				"preserveNullAndEmptyArrays": true,
+			},
+		},
+		{
+			"$lookup": bson.M{
+				"from":         "st_doms",
+				"localField":   "room.st_dom_id",
+				"foreignField": "_id",
+				"as":           "dorm",
+			},
+		},
+		{
+			"$unwind": bson.M{
+				"path":                       "$dorm",
+				"preserveNullAndEmptyArrays": true,
+			},
+		},
+	}
+
+	cursor, err := s.repairsCollection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch completed repairs: %v", err)
+	}
+	defer cursor.Close(ctx)
+
+	var repairs []map[string]interface{}
+	for cursor.Next(ctx) {
+		var repair bson.M
+		if err := cursor.Decode(&repair); err != nil {
+			continue
+		}
+		repairs = append(repairs, repair)
+	}
+
+	return repairs, nil
 }
 
 // FormatCSV formats CSV data to string
